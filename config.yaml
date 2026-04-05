@@ -1,0 +1,200 @@
+# Model format: "provider:model"
+# Examples:
+#   openrouter:deepseek/deepseek-v3.2, openai:gpt-4.1, openai:o3-mini, openai:o3
+#   anthropic:claude-sonnet-4-20250514, anthropic:claude-opus-4-20250514
+#   google_genai:gemini-2.5-flash, google_genai:gemini-2.5-pro
+#   openrouter:anthropic/claude-sonnet-4, openrouter:google/gemini-2.5-pro
+#   ollama:llama3.1, ollama:qwen2.5, ollama:deepseek-r1:14b
+#
+# Common parameters:
+#   temperature:      0.0-2.0 (creativity, lower = more deterministic)
+#   max_tokens:       max output tokens (e.g., 4096, 8192, 16384)
+#   top_p:            0.0-1.0 (nucleus sampling)
+#   top_k:            1-100 (top-k sampling, Anthropic/Gemini/Ollama)
+#   stop:             ["\\n\\n"] (stop sequences)
+#
+# Reasoning/thinking (for capable models):
+#   reasoning:        true/false (enable extended thinking)
+#   reasoning_effort:  "low" / "medium" / "high" (OpenAI o1/o3 series)
+#   thinking_budget:  10000-100000 (token budget, Anthropic Claude / Google Gemini 2.5)
+#
+# Examples:
+#   OpenAI o3-mini with reasoning:
+#     model: "openai:o3-mini"
+#     reasoning: true
+#     reasoning_effort: "medium"
+#
+#   Claude with extended thinking:
+#     model: "anthropic:claude-sonnet-4-20250514"
+#     reasoning: true
+#     thinking_budget: 20000
+#     max_tokens: 16384
+#
+#   Gemini 2.5 with thinking:
+#     model: "google_genai:gemini-2.5-pro"
+#     reasoning: true
+#     thinking_budget: 16000
+#     max_tokens: 8192
+#
+#   Local Ollama:
+#     model: "ollama:llama3.1"
+#     temperature: 0.3
+#     max_tokens: 4096
+
+llm_config:
+  default_model: "openrouter:deepseek/deepseek-v3.2"
+
+  # A lightweight model should suffice
+  metadata_extractor:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0
+  
+  # A lightweight model should suffice
+  tree_builder:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0
+
+  # Should be a more capable model
+  tree_search:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0
+
+  # The strongest model better with thinking/reasoning capabilities
+  report_writer:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0.3
+
+  # This one is not used, can discard.
+  query_expander:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0.3
+
+  # The strongest model better with thinking/reasoning capabilities
+  chat_agent:
+    model: "openrouter:deepseek/deepseek-v3.2"
+    temperature: 0.3
+    # max_tokens: 8192
+    # reasoning: false
+    # reasoning_effort: "medium"    # OpenAI o1/o3
+    # thinking_budget: 10000        # Anthropic / Gemini
+    # top_p: 0.95
+    # top_k: 40
+
+embedding_config:
+  # Provider: "ollama", "openai", "google", "huggingface", "cohere", "voyageai"
+  provider: "ollama"
+  model: "qwen3-embedding:8b"
+  # Important: the released chroma db was built with qwen3-embedding:8b, do not change the embedding model if you want to use the released db. 
+
+  # For paid APIs, set the corresponding API key in .env:
+  #   OPENAI_API_KEY, GOOGLE_API_KEY, COHERE_API_KEY, VOYAGE_API_KEY
+  #
+  # Examples:
+  #   provider: "openai"
+  #   model: "text-embedding-3-small"
+  #
+  #   provider: "google"
+  #   model: "models/text-embedding-004"
+  #
+  #   provider: "cohere"
+  #   model: "embed-english-v3.0"
+  #
+  #   provider: "voyageai"
+  #   model: "voyage-3"
+
+chroma_config:
+  accessible_collection: "accessible_papers"
+  inaccessible_collection: "inaccessible_papers"
+  persist_directory: "./chroma_db"
+  batch_size: 200
+
+marker_config:
+  api_url: "https://www.datalab.to/api/v1/marker"
+  max_concurrency: 5
+
+openalex_config:
+  base_url: "https://api.openalex.org"
+
+arxiv_config:
+  default_max_results: 300
+
+search_config:
+  max_results_per_search: 500
+
+project_config:
+  projects_root: "./projects"
+
+tree_config:
+  if_thinning: false
+  min_token_threshold: 5000
+  summary_token_threshold: 200
+  if_add_node_summary: "yes"
+
+retrieval_config:
+  max_concurrency: 5
+
+citation_config:
+  batch_size: 10
+  max_concurrency: 5
+  
+chat_config:
+  # Summarize the history if it exceeds the token threshold to keep the conversation within model limits.
+  summarization_token_threshold: 8000
+  max_papers_per_search: 10
+  auto_title_model: "openrouter:deepseek/deepseek-v3.2"
+
+# LangSmith observability (optional, free tier: 5000 traces/month)
+# Set langsmith_enabled: true and add LANGCHAIN_API_KEY to .env
+observability:
+  langsmith_enabled: false
+
+
+# ── Agent Configuration ──
+# Configure tools and skills for each agent independently.
+# Skills are SKILL.md instruction files in the skills/ directory.
+# Custom tools are Python functions in the custom_tools/ directory.
+#
+# Available built-in skills:
+#   fact-checker     — Verifies citations against source papers
+#   critique         — Self-review and revision loop
+#   debate           — Multi-perspective analysis
+#   gap-analyzer     — Identifies research gaps
+#   related-work-finder — Maps connections across indexed papers
+#
+# Available built-in tools:
+#   list_papers, view_paper_structure, read_paper_sections, search_papers
+#   list_reports, read_report
+#
+# Custom tools: "module_name.function_name" (from custom_tools/ directory)
+
+agents:
+  # Chat QA agent
+  chat:
+    # model: "openai:gpt-4.1"     # override llm_config.chat_agent
+    # temperature: 0.3
+    # max_tokens: 8192
+    skills:
+      - "gap-analyzer"
+      - "related-work-finder"
+      - "debate"
+    custom_tools: []
+    subagents:
+      paper-retriever:
+        # model: "openrouter:deepseek/deepseek-v3.2"
+        skills: []
+        custom_tools: []
+
+  # Report generation agent
+  research:
+    # model: "openai:gpt-4.1"
+    # temperature: 0.3
+    # max_tokens: 8192
+    skills:
+      - "critique"
+      - "fact-checker"
+    custom_tools: []
+    subagents:
+      paper-analyst:
+        # model: "openrouter:deepseek/deepseek-v3.2"
+        skills: []
+        custom_tools: []
