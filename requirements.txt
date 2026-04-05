@@ -1,0 +1,54 @@
+# Core
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+websockets>=13.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.0
+python-multipart>=0.0.9
+
+# LLM — LangChain ecosystem
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+langchain-anthropic>=0.2.0
+langchain-google-genai>=2.0.0
+langchain-chroma>=0.1.4
+langchain-ollama>=0.2.0
+langchain-openrouter>=0.2.0
+langgraph>=0.2.0
+langgraph-checkpoint-sqlite>=2.0.0
+deepagents>=0.1.0
+
+# Optional LLM providers (install as needed)
+langchain-cohere>=0.3.0
+langchain-voyageai>=0.2.0
+langchain-huggingface>=0.1.0
+
+# Vector DB
+chromadb>=0.5.0
+
+# HTTP
+httpx>=0.27.0
+aiohttp>=3.10.0
+aiofiles>=24.1.0
+aiosqlite>=0.20.0
+
+# Search & NLP
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.26.0
+pyparsing>=3.1.0
+arxiv>=2.1.0
+
+# PDF
+PyPDF2>=3.0.0
+
+# Token counting (fallback for non-OpenAI models)
+tiktoken>=0.7.0
+
+# Config
+pyyaml>=6.0.0
+
+# Observability (optional)
+langsmith>=0.1.0
