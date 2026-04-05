@@ -38,7 +38,7 @@
 
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+## 🌟 About The Project
 
 <p align="center">
   <img src="asset/system_architecture.jpg" width="700">
@@ -62,7 +62,7 @@ EasyPaper is a Human-in-the-Loop AI tool designed for large-scale literature rev
 
 
 <!-- GETTING STARTED -->
-## Getting Started
+## 🚀 Getting Started
 
 The system works as a self-hosted React/FastAPI web application. 
 
@@ -117,7 +117,7 @@ Make sure you have the followings:
 
 
 <!-- USAGE EXAMPLES -->
-## Usage
+## 📖 Usage
 
 <p align="center">
   <img src="asset/workflow.jpg">
@@ -217,7 +217,7 @@ The chat history is preserved on your file system.
 
 <div><p align="right">(<a href="#readme-top">back to top</a>)</p></div>
 
-## Venues
+## 🏛️ Venues
 
 |Type | Venue  | Year | 
 |--------|-------------|--------|
@@ -229,19 +229,19 @@ The chat history is preserved on your file system.
 
 <div><p align="right">(<a href="#readme-top">back to top</a>)</p></div>
 
-## Limitation
+## 💀 Limitation
 
 EasyPaper degrades to a GUI-version [PaperQA](https://github.com/Future-House/paper-qa) for non-CS papers, as it can only rely on user provided papers in that case.
 
 <!-- ROADMAP -->
-## Roadmap
+## 🧭 Roadmap
 
 - [ ] Polish the Prompt
 - [ ] Add more tools and skills
 - [ ] Try to add non-CS papers to the database
 
 <!-- CONTRIBUTING -->
-## Contributing
+## 🤝 Contributing
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!
@@ -251,7 +251,7 @@ Don't forget to give the project a star! Thanks again!
 
 
 <!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
+## 👍 Acknowledgments
 
 * The RAG chunking and indexing are inspired by [PageIndex](https://github.com/VectifyAI/PageIndex).
 * The surprisingly accurate OCR is powered by [Marker](https://github.com/datalab-to/marker).
