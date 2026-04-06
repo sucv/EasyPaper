@@ -79,7 +79,7 @@ Make sure you have the followings:
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/github_username/EasyPaper.git
+   git clone https://github.com/sucv/EasyPaper.git
    ```
 3. Install NPM packages
    ```sh
@@ -91,11 +91,13 @@ Make sure you have the followings:
    # under EasyPaper/backend/
    pip install -r requirements.txt
    ```
-4. (Optional) Download the database (containing 80K top-tier CS papers) at Release, and put it into `EasyPaper/chroma_db/`
+4. (Optional) Download the database (containing 80K top-tier CS papers) from [Release](https://github.com/sucv/EasyPaper/releases/tag/db), and put it into `EasyPaper/chroma_db/`
    ```sh
    # under EasyPaper/
    mkdir chroma_db
    # Then put the downloaded chroma.sqlite3 into EasyPaper/chroma_db
+   # Note that the database is indexed using the qwen3-embedding:8b from Ollama.
+   # If you use the database, you have to specify qwen3-embedding:8b for embedding_config in your config.yaml
    ```
 5. Provide your API keys and/or Ollama base url
    ```sh
@@ -140,7 +142,10 @@ EasyPaper supports three data sources:
     + If you are non-CS people and have some PDFs to analyze just like the [PaperQA](https://github.com/Future-House/paper-qa).
 
 
-Choose your query method from `Vector`, `Boolean expression`, or `arXiv`, select the `Year` and `Venue`, then click Search. Select the interested paper in the results or check the citation count.
+Choose your query method from `Vector`, `Boolean Expression`, or `arXiv`, select the `Year` and `Venue`, then click Search. Select the interested paper in the results or check the citation count.
+
++ Both the `Vector` and `Boolean Expression` will query with the `Title` only. Currently there is no way to add other field. See [Example](https://github.com/pyparsing/pyparsing/blob/8c7908349209f282b0092f53dbcf8fd1713876f0/examples/booleansearchparser.py#L330) for the `Boolean Expression`.
++ For `arXiv`, it's the official API, which allows "Title`, `Author`, and many more. See the [official example].
 
 <p align="center">
   <img src="asset/search.jpg">
@@ -205,7 +210,7 @@ Click the `Index` , followed by the `Retrieve`. EasyPaper will download the pape
 
 Input your prompt in the text field, then click the `Research`. Once completed, you may view or export the report.
 
-More than one `Research` can be conducted for an `Idea`.
+More than one `Research` can be conducted for an `Idea`, sequentially.
 
 #### 📖 Chat
 
@@ -233,7 +238,7 @@ The chat history is preserved on your file system.
 
 ## 💀 Limitation
 
-EasyPaper degrades to a GUI-version [PaperQA](https://github.com/Future-House/paper-qa) for non-CS papers, as it can only rely on user provided papers in that case.
+EasyPaper degrades to a GUI-version [PaperQA](https://github.com/Future-House/paper-qa) for non-CS papers, as it can only rely on user provided papers or arXiv papers in that case.
 
 <!-- ROADMAP -->
 ## 🧭 Roadmap
@@ -241,6 +246,8 @@ EasyPaper degrades to a GUI-version [PaperQA](https://github.com/Future-House/pa
 - [ ] Polish the Prompt
 - [ ] Add more tools and skills
 - [ ] Try to add non-CS papers to the database
+- [x] Added simple query cache.
+- [x] Added shimmer placeholder for the search table.
 
 <!-- CONTRIBUTING -->
 ## 🤝 Contributing

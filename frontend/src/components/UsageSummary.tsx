@@ -17,17 +17,36 @@ function formatTokens(n: number): string {
 export default function UsageSummary({ projectId, refreshTrigger }: Props) {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUsage();
   }, [projectId, refreshTrigger]);
 
   const fetchUsage = async () => {
+    setLoading(true);
     try {
       const res = await fetch(`${API}/projects/${projectId}/usage`);
       if (res.ok) setUsage(await res.json());
-    } catch {}
+    } catch {} finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+      return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 animate-pulse flex items-center gap-4">
+            <div className="w-12 h-4 bg-gray-200 rounded" />
+            <div className="flex items-center gap-3">
+              <div className="w-24 h-3 bg-gray-100 rounded" />
+              <div className="w-20 h-3 bg-gray-100 rounded" />
+              <div className="w-20 h-3 bg-gray-100 rounded" />
+            </div>
+          </div>
+        </div>
+      );
+    }
 
   if (!usage) return null;
 

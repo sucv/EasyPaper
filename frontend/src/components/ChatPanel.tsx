@@ -72,7 +72,7 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
   const [scope, setScope] = useState('all');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-
+  const [sessionsLoading, setSessionsLoading] = useState(true);
   // Fetch sessions on mount
   useEffect(() => {
     if (projectId) fetchSessions();
@@ -101,11 +101,14 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
 
 
   const fetchSessions = async () => {
+    setSessionsLoading(true);
     try {
       const res = await fetch(`${API}/projects/${projectId}/chat/sessions`);
       const data = await res.json();
       setSessions(data.sessions || []);
-    } catch {}
+    } catch {} finally {
+      setSessionsLoading(false);
+    }
   };
 
   const loadSession = async (threadId: string) => {
@@ -268,50 +271,63 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
         <div className="border-t border-gray-100">
           {/* Session bar */}
           <div className="px-5 py-2.5 bg-gray-50/60 border-b border-gray-100 flex items-center gap-2 flex-wrap">
-            <select
-              className="border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 max-w-[240px]"
-              value={activeThread || ''}
-              onChange={(e) => e.target.value && loadSession(e.target.value)}
-            >
-              <option value="">Select conversation...</option>
-              {sessions.map((s) => (
-                <option key={s.thread_id} value={s.thread_id}>
-                  {s.title} ({s.message_count} msgs)
-                </option>
-              ))}
-            </select>
+            {sessionsLoading ? (
+              <div className="flex items-center gap-2 animate-pulse w-full">
+                <div className="w-48 h-8 bg-gray-200 rounded-md" />
+                <div className="w-16 h-8 bg-gray-200 rounded-md" />
+                <div className="ml-auto flex items-center gap-2">
+                  <div className="w-12 h-4 bg-gray-200 rounded" />
+                  <div className="w-32 h-8 bg-gray-200 rounded-md" />
+                </div>
+              </div>
+            ) : (
+              <>
+                <select
+                  className="border border-gray-300 rounded-md px-2 py-1.5 text-sm bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 max-w-[240px]"
+                  value={activeThread || ''}
+                  onChange={(e) => e.target.value && loadSession(e.target.value)}
+                >
+                  <option value="">Select conversation...</option>
+                  {sessions.map((s) => (
+                    <option key={s.thread_id} value={s.thread_id}>
+                      {s.title} ({s.message_count} msgs)
+                    </option>
+                  ))}
+                </select>
 
-            <button
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md text-xs font-medium"
-              onClick={createNewSession}
-            >
-              + New
-            </button>
+                <button
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md text-xs font-medium"
+                  onClick={createNewSession}
+                >
+                  + New
+                </button>
 
-            {activeThread && (
-              <button
-                className="text-red-500 hover:text-red-700 text-xs font-medium"
-                onClick={() => deleteSession(activeThread)}
-              >
-                Delete
-              </button>
+                {activeThread && (
+                  <button
+                    className="text-red-500 hover:text-red-700 text-xs font-medium"
+                    onClick={() => deleteSession(activeThread)}
+                  >
+                    Delete
+                  </button>
+                )}
+
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Scope:</span>
+                  <select
+                    className="border border-gray-300 rounded-md px-2 py-1.5 text-xs bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    value={scope}
+                    onChange={(e) => updateScope(e.target.value)}
+                  >
+                    <option value="all">All Papers</option>
+                    {ideas.map((idea) => (
+                      <option key={idea.idea_slug} value={`idea:${idea.idea_slug}`}>
+                        {idea.idea_text.slice(0, 40)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
-
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs text-gray-500">Scope:</span>
-              <select
-                className="border border-gray-300 rounded-md px-2 py-1.5 text-xs bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                value={scope}
-                onChange={(e) => updateScope(e.target.value)}
-              >
-                <option value="all">All Papers</option>
-                {ideas.map((idea) => (
-                  <option key={idea.idea_slug} value={`idea:${idea.idea_slug}`}>
-                    {idea.idea_text.slice(0, 40)}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {/* Messages area */}

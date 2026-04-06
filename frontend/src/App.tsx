@@ -25,6 +25,7 @@ export default function App() {
   const [usageRefresh, setUsageRefresh] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [projectLoading, setProjectLoading] = useState(false);
 
   // Dedup dialog state
   const [dedupDialog, setDedupDialog] = useState<{
@@ -150,7 +151,12 @@ export default function App() {
   const handleSelectProject = async (pid: string) => {
     setProjectId(pid);
     setCart([]);
-    await loadProject(pid);
+    setProjectLoading(true);
+    try {
+      await loadProject(pid);
+    } finally {
+      setProjectLoading(false);
+    }
   };
 
   const handleCreateProject = async (name?: string) => {
@@ -373,6 +379,15 @@ export default function App() {
       <StatusBar busy={busyState} progress={globalProgress} />
       {projectId ? (
         <div className="px-8 py-6 space-y-6 max-w-[1400px] mx-auto">
+          {projectLoading && (
+            <div className="flex items-center gap-2 text-sm text-indigo-600 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-100">
+              <svg className="animate-spin h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span>Loading project...</span>
+            </div>
+          )}
           <UsageSummary projectId={projectId} refreshTrigger={usageRefresh} />
           <SourceTable projectId={projectId} onAddToCart={addToCart} cartIds={cartIds} />
           <CartPanel
@@ -393,6 +408,7 @@ export default function App() {
             projectId={projectId}
             ideas={ideas}
             busy={busyState}
+            loading={projectLoading}
             onDeleteIdea={handleDeleteIdea}
             addListener={addListener}
             onRefresh={refreshProject}
