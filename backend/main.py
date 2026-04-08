@@ -37,6 +37,7 @@ from backend.utils.streaming import busy_state as busy_state_event
 from backend.pipeline.indexing import run_indexing
 from backend.pipeline.retrieval import run_retrieval
 from backend.research.agent import run_report_generation
+from backend.research.tasks import list_tasks, load_task
 from backend.models import ChatMessageRequest, ChatSessionCreate, ChatSessionUpdate
 from backend.chat.agent import invoke_chat, get_chat_history
 from backend.chat.sessions import (
@@ -127,6 +128,15 @@ async def api_delete_project(project_id: str):
 async def api_get_tags(accessible: bool = True):
     return get_unique_tags(accessible)
 
+@app.get("/config/tasks")
+async def api_list_tasks():
+    return {"tasks": list_tasks()}
+
+
+@app.get("/config/models")
+async def api_list_models():
+    cfg = get_config()
+    return {"models": [m.model_dump() for m in cfg.available_models]}
 
 # ── Search ──
 @app.post("/projects/{project_id}/search")
@@ -428,7 +438,8 @@ async def api_idea_files(project_id: str, idea_slug: str):
             reports.append({
                 "filename": f.name,
                 "title": (fm or {}).get("title") or f.stem.replace("_", " ").title(),
-                "writing_prompt": (fm or {}).get("writing_prompt") or None,
+                "task_name": (fm or {}).get("task_name") or (fm or {}).get("writing_prompt") or None,
+                "model": (fm or {}).get("model") or None,
                 "created_at": (fm or {}).get("created_at") or datetime.fromtimestamp(stat.st_mtime).isoformat(),
             })
 
@@ -518,6 +529,13 @@ async def api_research(project_id: str, idea_slug: str, req: ResearchRequest):
     if not await busy_manager.acquire(project_id, "research", idea_slug):
         raise HTTPException(409, "Another operation is in progress")
 
+    # Validate task exists
+    try:
+        load_task(req.task_id)
+    except (FileNotFoundError, ValueError) as e:
+        await busy_manager.release(project_id)
+        raise HTTPException(400, str(e))
+
     idea_dir = get_project_path(project_id) / "ideas" / idea_slug
     idea_txt = idea_dir / "idea.txt"
     idea_text = idea_txt.read_text(encoding="utf-8").strip() if idea_txt.exists() else idea_slug
@@ -529,7 +547,11 @@ async def api_research(project_id: str, idea_slug: str, req: ResearchRequest):
 
     async def _run():
         try:
-            await run_report_generation(str(idea_dir), idea_text, req.writing_prompt, send_ws)
+            await run_report_generation(
+                str(idea_dir), idea_text,
+                req.task_id, req.model, req.model_kwargs,
+                send_ws,
+            )
         finally:
             await busy_manager.release(project_id)
             await _broadcast(project_id, busy_state_event(False))
@@ -595,6 +617,15 @@ async def api_export_paper(project_id: str, paper_id: str):
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{zip_name}"'},
     )
+
+@app.delete("/projects/{project_id}/ideas/{idea_slug}/reports/{filename}")
+async def api_delete_report(project_id: str, idea_slug: str, filename: str):
+    idea_dir = get_project_path(project_id) / "ideas" / idea_slug
+    report_path = idea_dir / "reports" / filename
+    if not report_path.exists():
+        raise HTTPException(404, "Report not found")
+    report_path.unlink()
+    return {"ok": True}
 
 @app.get("/projects/{project_id}/ideas/{idea_slug}/view/{filename}")
 async def api_view_file(project_id: str, idea_slug: str, filename: str):

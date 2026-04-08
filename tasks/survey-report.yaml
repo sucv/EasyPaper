@@ -1,0 +1,41 @@
+task_id: survey-report
+display_name: "Survey Report"
+description: "Synthesize findings across papers into a structured survey report"
+content_source: retrieval
+filename_template: "survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the following paper content for a survey report. Extract key contributions, methods, results, and limitations relevant to the research idea.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey report that synthesizes findings across multiple research papers.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections, adapting as appropriate:
+  1. Introduction — state the research question, scope
+  2. Background and Taxonomy — define key terms, categorize approaches
+  3. Methodology Comparison — compare methods using tables where appropriate
+  4. Key Findings — synthesize results across papers, identify themes and contradictions
+  5. Analysis and Discussion — trends, trade-offs, limitations, underexplored areas
+  6. Conclusion — summarize the state of the field, key takeaways
+
+  Use markdown formatting. Cite sources with (Author et al., Year). Include relevant figures.
+  Do NOT just summarize each paper sequentially — synthesize across papers.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

@@ -25,7 +25,6 @@ class LLMConfig(BaseModel):
     tree_builder: LLMModelConfig = LLMModelConfig()
     tree_search: LLMModelConfig = LLMModelConfig()
     report_writer: LLMModelConfig = LLMModelConfig(temperature=0.3)
-    query_expander: LLMModelConfig = LLMModelConfig(temperature=0.3)
     chat_agent: LLMModelConfig = LLMModelConfig(temperature=0.3)
 
 
@@ -114,6 +113,16 @@ class ObservabilityConfig(BaseModel):
     langsmith_enabled: bool = False
 
 
+class AvailableModel(BaseModel):
+    id: str
+    display_name: str
+    model_kwargs: dict = {}
+
+
+class ResearchTaskConfig(BaseModel):
+    max_worker_concurrency: int = 5
+
+
 class AppConfig(BaseModel):
     llm_config: LLMConfig = LLMConfig()
     embedding_config: EmbeddingConfig = EmbeddingConfig()
@@ -129,6 +138,8 @@ class AppConfig(BaseModel):
     citation_config: CitationConfig = CitationConfig()
     observability: ObservabilityConfig = ObservabilityConfig()
     agents: AgentsConfig = AgentsConfig()
+    research_task_config: ResearchTaskConfig = ResearchTaskConfig()
+    available_models: list[AvailableModel] = []
 
 
 def load_config(config_path: str = None) -> AppConfig:

@@ -81,3 +81,15 @@ export interface UsageData {
   total_completion_tokens: number;
   by_operation: Record<string, { prompt_tokens: number; completion_tokens: number; calls: number }>;
 }
+
+export interface TaskConfig {
+  task_id: string;
+  display_name: string;
+  description: string;
+}
+
+export interface ModelConfig {
+  id: string;
+  display_name: string;
+  model_kwargs: Record<string, any>;
+}

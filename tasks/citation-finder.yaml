@@ -1,0 +1,48 @@
+task_id: citation-finder
+display_name: "Citation Finder"
+description: "Extract all citations with their context and full reference entries"
+content_source: retrieval
+filename_template: "citations_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Scan the following paper content for all reference markers. These may appear as:
+  - Numbered: [1], [2-5], [1, 3, 7]
+  - Author-year: (Smith et al., 2020), (Smith and Jones, 2019)
+  - Any other citation format
+
+  For EACH unique citation marker found, extract:
+  1. The reference marker as it appears in text
+  2. The section title where it appears
+  3. The full citation/bibliography entry if available in the content
+  4. The surrounding context (1-2 sentences around the marker)
+
+  Output as a markdown table:
+  | Ref | Section | Full Citation | Context |
+  |-----|---------|---------------|---------|
+
+  If no reference section is available, note "N/A" for the full citation.
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  Combine all citation tables from individual papers into a unified document.
+
+  Research idea: {idea_text}
+
+  For each paper's citations, create a section with the paper's title as header.
+  Then include the paper's citation table.
+
+  After all tables, add a summary section with:
+  - Total unique citations found across all papers
+  - Most frequently cited works (if identifiable)
+  - Citation format patterns observed
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper citation analyses:
+  {worker_results}

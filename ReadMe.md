@@ -104,6 +104,7 @@ Make sure you have the followings:
    # under EasyPaper/
    cp .env.example .env
    # Then put your API keys or Ollama base url there
+   # Add LangSmith for free and accurate token usage and pricing tracking
    ```
 6. Edit the `EasyPaper/config.yaml` to specify your providers, models and configurations
 7. Launch the app

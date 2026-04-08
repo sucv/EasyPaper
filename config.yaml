@@ -42,40 +42,44 @@
 #     max_tokens: 4096
 
 llm_config:
-  default_model: "openrouter:deepseek/deepseek-v3.2"
+  default_model: "openai:gpt-5.4-mini"
 
   # A lightweight model should suffice
   metadata_extractor:
-    model: "openrouter:deepseek/deepseek-v3.2"
+    model: "openai:gpt-5.4-mini"
     temperature: 0
+    reasoning: true
+    reasoning_effort: "low"    # OpenAI o1/o3
   
   # A lightweight model should suffice
   tree_builder:
-    model: "openrouter:deepseek/deepseek-v3.2"
+    model: "openai:gpt-5.4-mini"
     temperature: 0
+    reasoning: true
+    reasoning_effort: "low"    # OpenAI o1/o3
 
   # Should be a more capable model
   tree_search:
-    model: "openrouter:deepseek/deepseek-v3.2"
+    model: "openai:gpt-5.4-mini"
     temperature: 0
+    reasoning: true
+    reasoning_effort: "medium"    # OpenAI o1/o3
 
   # The strongest model better with thinking/reasoning capabilities
   report_writer:
-    model: "openrouter:deepseek/deepseek-v3.2"
+    model: "openai:gpt-5.4"
     temperature: 0.3
+    reasoning: true
+    reasoning_effort: "medium"    # OpenAI o1/o3
 
-  # This one is not used, can discard.
-  query_expander:
-    model: "openrouter:deepseek/deepseek-v3.2"
-    temperature: 0.3
 
   # The strongest model better with thinking/reasoning capabilities
   chat_agent:
-    model: "openrouter:deepseek/deepseek-v3.2"
+    model: "openai:gpt-5.4"
     temperature: 0.3
     # max_tokens: 8192
-    # reasoning: false
-    # reasoning_effort: "medium"    # OpenAI o1/o3
+    reasoning: true
+    reasoning_effort: "low"    # OpenAI o1/o3
     # thinking_budget: 10000        # Anthropic / Gemini
     # top_p: 0.95
     # top_k: 40
@@ -125,23 +129,45 @@ project_config:
   projects_root: "./projects"
 
 tree_config:
-  if_thinning: false
-  min_token_threshold: 5000
+  # whether to perform tree thinning (merging nodes with too few tokens)
+  if_thinning: true
+  # Each tree node would have at least `min_token_threshold` of tokens. If a node has fewer tokens, it will be merged with its siblings or parent until the threshold is met. This helps ensure each node has enough content for meaningful retrieval and reasoning.
+  min_token_threshold: 500
+  # Each summary would have at most `summary_token_threshold` of tokens. If the summary exceeds this threshold, it will be further summarized to reduce tokens. This helps keep the summaries concise and within model limits.
   summary_token_threshold: 200
   if_add_node_summary: "yes"
 
+# How many concurrent call on `tree_search` model. Setting this to a higher number can speed up retrieval but may cause rate limit issues. Adjust based on your model provider limits and needs.
 retrieval_config:
   max_concurrency: 5
 
+# How many concurrent call on OpenAlex. Setting this to a higher number can speed up retrieval but may cause rate limit issues. Adjust based on your OpenAlex API limits and needs.
 citation_config:
   batch_size: 10
   max_concurrency: 5
   
 chat_config:
   # Summarize the history if it exceeds the token threshold to keep the conversation within model limits.
-  summarization_token_threshold: 8000
-  max_papers_per_search: 10
-  auto_title_model: "openrouter:deepseek/deepseek-v3.2"
+  summarization_token_threshold: 40000
+  max_papers_per_search: 15
+  auto_title_model: "openai:gpt-5.4-mini"
+
+research_task_config:
+  max_worker_concurrency: 5
+
+available_models:
+  - id: "openai:gpt-5.4-mini"
+    display_name: "GPT-5.4 Mini (Fast)"
+    model_kwargs:
+      reasoning_effort: "medium"
+  - id: "openai:gpt-4.1"
+    display_name: "GPT-4.1 (Balanced)"
+    model_kwargs:
+      temperature: 0.3
+  - id: "openai:o3-mini"
+    display_name: "O3 Mini (Reasoning)"
+    model_kwargs:
+      reasoning_effort: "medium"
 
 # LangSmith observability (optional, free tier: 5000 traces/month)
 # Set langsmith_enabled: true and add LANGCHAIN_API_KEY to .env
@@ -170,31 +196,26 @@ observability:
 agents:
   # Chat QA agent
   chat:
-    # model: "openai:gpt-4.1"     # override llm_config.chat_agent
+    # model: "openai:gpt-4.1"     # Already set in llm_config.chat_agent, can override here if needed
     # temperature: 0.3
     # max_tokens: 8192
-    skills:
-      - "gap-analyzer"
-      - "related-work-finder"
-      - "debate"
+    skills: []
     custom_tools: []
     subagents:
-      paper-retriever:
-        # model: "openrouter:deepseek/deepseek-v3.2"
+      paper-reader:
+        # model: "openrouter:deepseek/deepseek-v3.2" # will inherit from the chat_agent if not set
         skills: []
         custom_tools: []
 
   # Report generation agent
   research:
-    # model: "openai:gpt-4.1"
+    # model: "openai:gpt-4.1" # Already set in llm_config.report_writer, can override here if needed
     # temperature: 0.3
     # max_tokens: 8192
-    skills:
-      - "critique"
-      - "fact-checker"
+    skills: []
     custom_tools: []
     subagents:
       paper-analyst:
-        # model: "openrouter:deepseek/deepseek-v3.2"
+        # model: "openrouter:deepseek/deepseek-v3.2" # will inherit from the research agent if not set
         skills: []
         custom_tools: []

@@ -97,8 +97,11 @@ class AssignPapersRequest(BaseModel):
 class RetrieveRequest(BaseModel):
     paper_ids: list[str]
 
+
 class ResearchRequest(BaseModel):
-    writing_prompt: str
+    task_id: str
+    model: str
+    model_kwargs: dict = {}
 
 
 class BusyStateResponse(BaseModel):

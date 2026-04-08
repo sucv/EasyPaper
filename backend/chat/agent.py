@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from sys import prefix
 
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend, CompositeBackend
@@ -14,6 +15,7 @@ import aiosqlite
 from backend.config import get_config
 from backend.chat.prompts import CHAT_AGENT_PROMPT, RETRIEVAL_SUBAGENT_PROMPT
 from backend.tools.registry import resolve_tools, resolve_skills, BUILTIN_TOOLS
+from backend.tools.paper import list_papers, search_papers, view_paper_structure, read_paper_sections
 from backend.utils.usage import usage_tracker, UsageTrackingCallback, estimate_tokens
 
 
@@ -78,11 +80,8 @@ async def close_checkpointer(project_path: str):
 
 # ── Default tool sets ──
 
-CHAT_MAIN_DEFAULT_TOOLS = ["list_papers", "list_reports"]
-CHAT_RETRIEVER_DEFAULT_TOOLS = [
-    "list_papers", "view_paper_structure", "read_paper_sections",
-    "search_papers", "list_reports", "read_report",
-]
+CHAT_MAIN_DEFAULT_TOOLS = ["list_papers", "search_papers"]
+CHAT_READER_DEFAULT_TOOLS = ["view_paper_structure", "read_paper_sections"]
 
 
 # ── Agent factory ──
@@ -130,38 +129,37 @@ async def create_chat_agent_for_project(project_path: str, project_id: str, scop
     # Resolve main agent skills
     main_skills = resolve_skills(agents_cfg.skills)
 
-    # Build retriever subagent config
-    retriever_cfg = agents_cfg.subagents.get("paper-retriever", None)
+    # Build paper-reader subagent config
+    reader_cfg = agents_cfg.subagents.get("paper-reader", None)
 
-    retriever_tool_names = CHAT_RETRIEVER_DEFAULT_TOOLS.copy()
-    retriever_skills_names: list[str] = []
+    reader_tool_names = CHAT_READER_DEFAULT_TOOLS.copy()
+    reader_skills_names: list[str] = []
 
-    if retriever_cfg:
-        retriever_tool_names += retriever_cfg.custom_tools
-        retriever_skills_names = retriever_cfg.skills
+    if reader_cfg:
+        reader_tool_names += reader_cfg.custom_tools
+        reader_skills_names = reader_cfg.skills
 
-    retriever_tools = resolve_tools(retriever_tool_names)
-    retriever_skills = resolve_skills(retriever_skills_names)
+    reader_tools = resolve_tools(reader_tool_names)
+    reader_skills = resolve_skills(reader_skills_names)
 
-    # Retriever subagent model
-    retriever_model = chat_model
-    if retriever_cfg and retriever_cfg.model:
-        retriever_model = retriever_cfg.model
+    # Reader subagent model
+    reader_model = chat_model
+    if reader_cfg and reader_cfg.model:
+        reader_model = reader_cfg.model
 
-    retriever_subagent: dict = {
-        "name": "paper-retriever",
+    reader_subagent: dict = {
+        "name": "paper-reader",
         "description": (
-            "Searches and retrieves content from indexed research papers AND generated reports. "
-            "Use this for ANY question that requires: finding information in papers, "
-            "reading previously generated reports or analyses, comparing reports across ideas, "
-            "or synthesizing findings from multiple sources."
+            "Reads and analyzes a single indexed paper. "
+            "Use this to delegate per-paper questions. The reader examines "
+            "the paper's structure and reads specific sections to answer questions."
         ),
         "system_prompt": RETRIEVAL_SUBAGENT_PROMPT,
-        "tools": retriever_tools,
-        "model": retriever_model,
+        "tools": reader_tools,
+        "model": reader_model,
     }
-    if retriever_skills:
-        retriever_subagent["skills"] = retriever_skills
+    if reader_skills:
+        reader_subagent["skills"] = reader_skills
 
     # Build create_deep_agent kwargs
     agent_kwargs: dict = {
@@ -169,7 +167,7 @@ async def create_chat_agent_for_project(project_path: str, project_id: str, scop
         "model": model_obj,
         "tools": main_tools,
         "system_prompt": CHAT_AGENT_PROMPT,
-        "subagents": [retriever_subagent],
+        "subagents": [reader_subagent],
         "checkpointer": checkpointer,
         "backend": _make_backend,
     }
@@ -219,16 +217,14 @@ async def invoke_chat(
 
             if kind == "on_tool_start" and send_ws:
                 tool_name = event.get("name", "")
-                is_subagent = agent_name == "paper-retriever"
+                is_subagent = agent_name == "paper-reader"
                 prefix = "Retriever: " if is_subagent else ""
                 status_map = {
                     "list_papers": f"{prefix}Listing indexed papers...",
                     "view_paper_structure": f"{prefix}Examining paper structure...",
                     "read_paper_sections": f"{prefix}Reading paper sections...",
                     "search_papers": f"{prefix}Searching across papers...",
-                    "list_reports": f"{prefix}Listing reports...",
-                    "read_report": f"{prefix}Reading report...",
-                    "task": "Delegating to paper retriever...",
+                    "task": "Delegating to paper reader...",
                     "write_todos": "Planning approach...",
                 }
                 msg = status_map.get(tool_name, f"{prefix}Using {tool_name}...")
@@ -239,7 +235,7 @@ async def invoke_chat(
                 if tool_name == "task":
                     await send_ws(make_event("chat_status", thread_id=thread_id, message="Synthesizing answer..."))
 
-            if kind == "on_chat_model_end" and agent_name != "paper-retriever":
+            if kind == "on_chat_model_end" and agent_name != "paper-reader":
                 output = event.get("data", {}).get("output", None)
                 if output and hasattr(output, "content") and output.content:
                     if not (hasattr(output, "tool_calls") and output.tool_calls and not output.content):
