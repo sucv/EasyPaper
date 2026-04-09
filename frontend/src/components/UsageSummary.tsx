@@ -48,10 +48,16 @@ export default function UsageSummary({ projectId, refreshTrigger }: Props) {
       );
     }
 
-  if (!usage) return null;
-
-  const totalTokens = usage.total_prompt_tokens + usage.total_completion_tokens;
-  if (totalTokens === 0 && usage.pdfs_indexed === 0) return null;
+  if (!usage) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 flex items-center gap-4 text-sm">
+          <span className="font-semibold text-gray-700">Usage</span>
+          <span className="text-xs text-gray-400">No usage recorded yet</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

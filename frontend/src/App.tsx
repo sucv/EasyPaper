@@ -151,6 +151,7 @@ export default function App() {
   const handleSelectProject = async (pid: string) => {
     setProjectId(pid);
     setCart([]);
+    setIdeas([]);
     setProjectLoading(true);
     try {
       await loadProject(pid);
