@@ -3,7 +3,7 @@
 ## v0.2.0
 
 ### Removed
-- Removed the Agent/Deepagent for each research panel, since the autonomous agent is not able to choose the correct skills and tools for the task. 
+- Removed the Agent/Subagent for each research panel, since the autonomous agent is not able to choose the correct skills and tools for the task. 
 - Disabled the Chat Agent from accessing research report and retrieval files. Now the Chat Agent is a pure RAG chatbot on indexed papers.
 
 ### Added
