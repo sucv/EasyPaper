@@ -122,7 +122,7 @@ Make sure you have the followings:
 ## 📖 Usage
 
 <p align="center">
-  <img src="asset/workflow.jpg">
+  <img src="asset/flow.jpg">
 </p>
 
 EasyPaper starts with creating a `Project`. You may also continue from an existing `Project`. A `Project` can have multiple `Idea`, each `Idea` can have multiple reports from different aspects. 
