@@ -1,0 +1,54 @@
+task_id: survey-related-work
+display_name: "Related Work Survey"
+description: "Survey how papers categorize prior work, citation patterns, and positioning strategies"
+content_source: retrieval
+filename_template: "related_work_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the related work section of the following paper. Extract how the paper organizes, references, and differentiates itself from prior work.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Taxonomy of Prior Work** — what categories or groupings the paper uses to organize related work (e.g., "supervised methods," "graph-based approaches," "diffusion models")
+  2. **Key Referenced Works** — list the most prominently discussed prior works (author, year, and the brief characterization given)
+  3. **Differentiation Claims** — how the paper explicitly distinguishes itself from each category or specific prior work
+  4. **Acknowledged Inspirations** — any prior work the paper explicitly builds upon or extends
+  5. **Criticisms of Prior Work** — specific limitations or weaknesses attributed to prior methods
+  6. **Scope of Coverage** — which subfields or adjacent areas are included vs. excluded from the related work discussion
+  7. **Cross-References to Other Sections** — any claims in related work that are validated later in experiments or methodology
+
+  If any of the above is not present, state "Not present."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes how multiple papers organize and position themselves relative to prior work, based on their related work sections.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — scope and purpose of this related work meta-analysis
+  2. Taxonomy Comparison — how different papers categorize the field; where taxonomies agree and conflict; propose a unified taxonomy if possible
+  3. Citation Network Analysis — which prior works are cited most frequently across papers; identify foundational/canonical works; detect overlooked but potentially important works
+  4. Positioning Strategies — common patterns in how papers differentiate themselves (e.g., "we are the first to...", "unlike X, we..."); rhetorical strategies used
+  5. Criticisms and Gaps — recurring criticisms of prior work; whether criticisms in one paper apply to methods proposed in another surveyed paper
+  6. Intellectual Lineage — trace influence chains; which papers build on which; identify distinct "schools of thought" or research threads
+  7. Coverage Blind Spots — subfields or approaches that most papers ignore in their related work; adjacent areas that could be relevant but are rarely mentioned
+  8. Field Structure — based on cross-paper citation and categorization patterns, describe the overall structure of the research landscape
+
+  Use markdown formatting. Cite sources with (Author et al., Year).
+  Do NOT list each paper's related work separately — synthesize across papers to map the research community's structure.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

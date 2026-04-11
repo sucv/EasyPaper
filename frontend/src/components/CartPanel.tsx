@@ -1,14 +1,14 @@
 import React, { useState, useRef } from 'react';
 import PaperTable from './PaperTable';
-import type { PaperEntry, IdeaState } from '../types';
+import type { Paper, IdeaState } from '../types';
 
 interface Props {
   projectId: string;
-  cart: PaperEntry[];
+  cart: Paper[];
   ideas: IdeaState[];
   onRemove: (ids: string[]) => void;
-  onAssign: (ideaSlug: string, papers: PaperEntry[]) => void;
-  onNewIdea: (text: string, papers: PaperEntry[]) => void;
+  onAssign: (ideaSlug: string, papers: Paper[]) => void;
+  onNewIdea: (text: string, papers: Paper[]) => void;
   onUploadPapers: (files: FileList) => void;
 }
 

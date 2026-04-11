@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import IdeaPanel from './IdeaPanel';
 import StatusBadge from './StatusBadge';
-import type { IdeaState, BusyState, WsEvent } from '../types';
+import type { IdeaState, Paper, BusyState, WsEvent } from '../types';
 
 interface Props {
   projectId: string;
@@ -9,11 +9,12 @@ interface Props {
   busy: BusyState;
   loading?: boolean;
   onDeleteIdea: (slug: string) => void;
+  onAddToCart: (papers: Paper[]) => void;
   addListener: (fn: (e: WsEvent) => void) => () => void;
   onRefresh: () => void;
 }
 
-export default function IdeaAccordion({ projectId, ideas, busy, loading = false, onDeleteIdea, addListener, onRefresh }: Props) {
+export default function IdeaAccordion({ projectId, ideas, busy, loading = false, onDeleteIdea, onAddToCart, addListener, onRefresh }: Props) {
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
 
   const getCounts = (idea: IdeaState) => {
@@ -84,6 +85,7 @@ export default function IdeaAccordion({ projectId, ideas, busy, loading = false,
                   <IdeaPanel
                     projectId={projectId} idea={idea} busy={busy}
                     onDelete={() => onDeleteIdea(idea.idea_slug)}
+                    onAddToCart={onAddToCart}
                     addListener={addListener} onRefresh={onRefresh}
                   />
                 </div>

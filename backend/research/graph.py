@@ -11,7 +11,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, START, END
 
-from backend.config import get_config
+from backend.config import get_config, get_model_prices
 from backend.utils.usage import usage_tracker, estimate_tokens
 from backend.utils.streaming import research_progress
 
@@ -158,7 +158,14 @@ async def delegate_node(state: ResearchState, config: RunnableConfig) -> dict:
                 else:
                     input_tokens = estimate_tokens(prompt)
                     output_tokens = estimate_tokens(result.content)
-                await usage_tracker.record_tokens(project_id, "research_worker", input_tokens, output_tokens)
+
+                input_price, output_price = get_model_prices(model_str)
+                await usage_tracker.record_tokens(
+                    project_id, "research_worker", input_tokens, output_tokens,
+                    model=model_str,
+                    input_price_per_1m=input_price,
+                    output_price_per_1m=output_price,
+                )
 
                 return {
                     "filename": file_entry["filename"],
@@ -214,7 +221,14 @@ async def synthesize_node(state: ResearchState, config: RunnableConfig) -> dict:
     else:
         input_tokens = estimate_tokens(synthesis_prompt)
         output_tokens = estimate_tokens(result.content)
-    await usage_tracker.record_tokens(project_id, "research_synthesis", input_tokens, output_tokens)
+
+    input_price, output_price = get_model_prices(model_str)
+    await usage_tracker.record_tokens(
+        project_id, "research_synthesis", input_tokens, output_tokens,
+        model=model_str,
+        input_price_per_1m=input_price,
+        output_price_per_1m=output_price,
+    )
 
     report_content = result.content
     report_title = task_config.get("display_name", "Report")

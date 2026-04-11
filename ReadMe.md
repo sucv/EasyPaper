@@ -29,7 +29,6 @@
     <li><a href="#usage">Usage</a></li>
     <li><a href="#venues">Venues</a></li>
     <li><a href="#limitation">Limitation</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
@@ -126,8 +125,7 @@ Make sure you have the followings:
   <img src="asset/workflow.jpg">
 </p>
 
-EasyPaper starts with creating a `Project`. You may also continue from an existing `Project`. A `Project` can have multiple `Idea`, each `Idea` can have multiple reports from different aspects. The `Research Agent` and `Chat Agent` can reach any reports or indexed papers under the same `Project`.
-
+EasyPaper starts with creating a `Project`. You may also continue from an existing `Project`. A `Project` can have multiple `Idea`, each `Idea` can have multiple reports from different aspects. 
 
 #### 📖 Query the database and Select the paper
 
@@ -193,11 +191,17 @@ relevant works of the proposed method and the reference section
 <div><p align="right">(<a href="#readme-top">back to top</a>)</p></div>
 
 <!-- ROADMAP -->
-#### 📖 Index and Retrieve
+#### 📖 Download and Retrieve
 
-Click the `Index` , followed by the `Retrieve`. EasyPaper will download the paper, run the OCR, run the vector-less indexing, and retrieve the relevant nodes using AI.
+Click the `Download` , followed by the `Retrieve`. EasyPaper will download the paper, run the OCR, run the vector-less indexing, and retrieve the relevant nodes using AI.
 
- Once the relevant segments are retrieved, you can view or export them from the Column `Action`.
+<p align="center">
+  <img src="asset/retrieve.jpg">
+</p>
+
+Before Retrieval, EasyPaper will show the page number of each PDF and the estimated cost. You may choose the page range for length ones. If a pdf has already been downloaded or retrieved, it will be skipped, respectively.
+
+Once the relevant segments are retrieved, you can view or export them from the Column `Action`.
 
 
 <p align="center">
@@ -209,13 +213,17 @@ Click the `Index` , followed by the `Retrieve`. EasyPaper will download the pape
 <!-- Deep-Research -->
 #### 📖 Deep Research
 
-Input your prompt in the text field, then click the `Research`. Once completed, you may view or export the report.
+Choose the task and LLM, then click the `Run the Task`. Once completed, you may view or export the report. The research starts by delegating paper-wise task to the worker LLM, aggregating the results, finally adding the summary.
+
+You may add your custom task by defining the yaml file in `EasyPaper/tasks`. Once any new yaml is added, EasyPaper will display it in the dropdown manual before `Run the Task`.
 
 More than one `Research` can be conducted for an `Idea`, sequentially.
 
 #### 📖 Chat
 
 In the `Paper QA` panel, you may create or continue a chat, and also choose the `Scope` of the conversation to one or all `Idea`(s).
+
+The Chat agent has the tools of list all papers and see the paper structure (i.e., the tree index). The agent will delegate paper-wise task to subagents, following by running the RAG.
 
 The chat history is preserved on your file system.
 
@@ -224,6 +232,14 @@ The chat history is preserved on your file system.
 </p>
 
 <div><p align="right">(<a href="#readme-top">back to top</a>)</p></div>
+
+## 💲 Cost 
+
+In the top panel, EasyPaper shows an approximation to the cost so far. For accurate cost tracking, provide your [LangSmith](https://www.smith.langchain.com/) API key `LANGCHAIN_API_KEY` in your `.env` and set `langsmith_enabled` to `true`. You will then be able to see the detailed usage, content, and cost via LangSmith's console.
+
+<p align="center">
+  <img src="asset/cost.jpg">
+</p>
 
 ## 🏛️ Venues
 
@@ -241,14 +257,6 @@ The chat history is preserved on your file system.
 
 EasyPaper degrades to a GUI-version [PaperQA](https://github.com/Future-House/paper-qa) for non-CS papers, as it can only rely on user provided papers or arXiv papers in that case.
 
-<!-- ROADMAP -->
-## 🧭 Roadmap
-
-- [ ] Polish the Prompt
-- [ ] Add more tools and skills
-- [ ] Try to add non-CS papers to the database
-- [x] Added simple query cache.
-- [x] Added shimmer placeholder for the search table.
 
 <!-- CONTRIBUTING -->
 ## 🤝 Contributing

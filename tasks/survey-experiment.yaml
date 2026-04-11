@@ -1,0 +1,55 @@
+task_id: survey-experiment
+display_name: "Experiment Survey"
+description: "Survey experimental design, benchmarks, metrics, and results across papers"
+content_source: retrieval
+filename_template: "experiment_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the experiment-related sections of the following paper. Extract all relevant experimental information.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Datasets and Benchmarks** — list every dataset used, its domain, size, and source if mentioned
+  2. **Evaluation Metrics** — all metrics reported (e.g., accuracy, F1, BLEU, FID, latency)
+  3. **Baselines and Comparisons** — all baseline methods compared against, and whether they are re-implemented or cited
+  4. **Experimental Setup** — hardware, hyperparameters, training details, number of runs, random seeds
+  5. **Main Results** — key quantitative results, ideally with numbers; note which tables/figures contain them
+  6. **Ablation Studies** — what components or design choices are ablated, and key findings
+  7. **Statistical Rigor** — presence of error bars, confidence intervals, significance tests, variance across runs
+  8. **Reproducibility Indicators** — whether code, data, or pretrained models are released
+
+  If any of the above is not present in the paper, explicitly state "Not reported."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes experimental practices and findings across multiple research papers.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — scope of the experimental survey, number of papers covered
+  2. Datasets and Benchmarks — which datasets are most commonly used, coverage gaps, domain distribution; use a summary table mapping papers to datasets
+  3. Evaluation Metrics — which metrics are standard, which are paper-specific, whether metrics are comparable across papers
+  4. Baselines and Comparison Practices — commonly used baselines, fairness of comparisons, whether papers compare against the same set of methods
+  5. Results Synthesis — unified comparison of reported results where possible; identify state-of-the-art progression over time; note contradictions or inconsistencies across papers
+  6. Ablation and Analysis Patterns — common ablation targets, what design choices matter most across papers
+  7. Reproducibility and Statistical Rigor — how many papers release code/data, prevalence of error bars and significance testing
+  8. Gaps and Recommendations — underused datasets, missing baselines, weak evaluation practices
+
+  Use markdown formatting. Include comparison tables where appropriate. Cite sources with (Author et al., Year).
+  Do NOT just summarize each paper's experiments sequentially — synthesize across papers to identify trends and gaps.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

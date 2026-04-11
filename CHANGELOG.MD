@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.0
+
+### Added
+- Better usage summary panel for approximating the cost.
+- Better dialog for Download, Retrieve, and Run Task buttons. For Retrieve button, user can see the page numbers of PDFs, view each PDFs, and decide the page range for the OCR.
+- The latest 15 queries are preserved after page reloaded or server restarted.
+
 ## v0.2.0
 
 ### Removed

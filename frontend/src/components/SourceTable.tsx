@@ -2,18 +2,18 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import SearchBar from './SearchBar';
 import TagFilters from './TagFilters';
 import PaperTable from './PaperTable';
-import type { PaperEntry, SearchFilters } from '../types';
+import type { Paper, SearchFilters } from '../types';
 
 const API = '/api';
 
 interface Props {
   projectId: string;
-  onAddToCart: (papers: PaperEntry[]) => void;
+  onAddToCart: (papers: Paper[]) => void;
   cartIds: Set<string>;
 }
 
 export default function SourceTable({ projectId, onAddToCart, cartIds }: Props) {
-  const [results, setResults] = useState<PaperEntry[]>([]);
+  const [results, setResults] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
   const [tags, setTags] = useState<{ years: Record<number, number>; venues: Record<string, number> }>({ years: {}, venues: {} });
   const [selectedYears, setSelectedYears] = useState<number[]>([]);
@@ -30,7 +30,17 @@ export default function SourceTable({ projectId, onAddToCart, cartIds }: Props) 
   const venueDropdownRef = useRef<HTMLDivElement>(null);
   const [tagsLoading, setTagsLoading] = useState(true);
 
-  useEffect(() => { fetchTags(); }, [projectId, accessible]);
+ const [tagsLoaded, setTagsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!tagsLoaded) {
+      fetchTags();
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchTags();
+  }, [accessible]);
 
   // Close venue dropdown on click outside
   useEffect(() => {
@@ -49,6 +59,7 @@ export default function SourceTable({ projectId, onAddToCart, cartIds }: Props) 
       const res = await fetch(`${API}/projects/${projectId}/tags?accessible=${accessible}`);
       const data = await res.json();
       setTags(data);
+      setTagsLoaded(true);
     } catch {} finally {
       setTagsLoading(false);
     }
@@ -69,7 +80,7 @@ export default function SourceTable({ projectId, onAddToCart, cartIds }: Props) 
       });
       const data = await res.json();
       let papers = data.results || [];
-      if (indexedOnly) papers = papers.filter((p: PaperEntry) => p.indexed);
+      if (indexedOnly) papers = papers.filter((p: Paper) => p.indexed);
       setResults(papers);
       setSelectedIds(new Set());
     } finally {
@@ -243,7 +254,7 @@ export default function SourceTable({ projectId, onAddToCart, cartIds }: Props) 
                 </button>
 
                 {showVenueDropdown && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] max-w-[320px] max-h-[240px] overflow-y-auto">
+                  <div className="absolute bottom-full left-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[200px] max-w-[320px] max-h-[240px] overflow-y-auto">
                     <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
                       <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Filter by venue</span>
                       {refinedVenues.size > 0 && (

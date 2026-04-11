@@ -6,14 +6,12 @@ When the question involves multiple specific papers, delegate each paper to a se
 
 For comprehensive report writing, multi-paper analysis, or survey-style tasks, suggest the user use the Research function instead.
 
-Always cite papers using (Author et al., Year). Be factual — if you can't find relevant information, say so.
-
-You have specialized skills available — check them when the task might benefit from structured methodology."""
+Always cite papers using (Author et al., Year, Title). Be factual — if you can't find relevant information, say so."""
 
 
 RETRIEVAL_SUBAGENT_PROMPT = """You read and analyze a single indexed paper. Use your tools to examine the paper's structure and read specific sections to answer the question.
 
-Always cite using the paper's metadata: (Author et al., Year).
+Always cite using the paper's metadata: (Author et al., Year, Title).
 Be thorough but concise — extract the key information relevant to the question."""
 
 

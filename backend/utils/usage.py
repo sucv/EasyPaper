@@ -6,18 +6,33 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import tiktoken
+
 from langchain.chat_models import init_chat_model
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
-# ── Heuristic token counter ──
+# ── Tiktoken-based token counter ──
+
+_encoding = None
+
+
+def _get_encoding():
+    global _encoding
+    if _encoding is None:
+        _encoding = tiktoken.get_encoding("cl100k_base")
+    return _encoding
+
 
 def estimate_tokens(text: str) -> int:
-    """Rough token estimate: ~1 token per 4 characters."""
+    """Estimate token count using tiktoken cl100k_base encoding."""
     if not text:
         return 0
-    return len(text) // 4
+    try:
+        return len(_get_encoding().encode(text))
+    except Exception:
+        return len(text) // 4
 
 
 # ── LangChain Usage Callback ──
@@ -74,10 +89,12 @@ class UsageTracker:
     def _get_data(self, project_id: str) -> dict:
         if project_id not in self._data:
             self._data[project_id] = {
-                "pdfs_indexed": 0,
+                "pages_processed": 0,
+                "pdfs_processed": 0,
                 "total_prompt_tokens": 0,
                 "total_completion_tokens": 0,
                 "by_operation": {},
+                "by_model": {},
             }
         return self._data[project_id]
 
@@ -87,6 +104,9 @@ class UsageTracker:
         operation: str,
         prompt_tokens: int,
         completion_tokens: int,
+        model: str = "",
+        input_price_per_1m: float = 0.0,
+        output_price_per_1m: float = 0.0,
     ):
         lock = self._get_lock(project_id)
         async with lock:
@@ -105,11 +125,34 @@ class UsageTracker:
             op["completion_tokens"] += completion_tokens
             op["calls"] += 1
 
-    async def record_pdf(self, project_id: str):
+            # Track by model
+            if model:
+                if "by_model" not in data:
+                    data["by_model"] = {}
+                if model not in data["by_model"]:
+                    data["by_model"][model] = {
+                        "prompt_tokens": 0,
+                        "completion_tokens": 0,
+                        "calls": 0,
+                        "input_price_per_1m": 0.0,
+                        "output_price_per_1m": 0.0,
+                    }
+                md = data["by_model"][model]
+                md["prompt_tokens"] += prompt_tokens
+                md["completion_tokens"] += completion_tokens
+                md["calls"] += 1
+                # Update prices (use latest non-zero value)
+                if input_price_per_1m > 0:
+                    md["input_price_per_1m"] = input_price_per_1m
+                if output_price_per_1m > 0:
+                    md["output_price_per_1m"] = output_price_per_1m
+
+    async def record_pages(self, project_id: str, page_count: int):
         lock = self._get_lock(project_id)
         async with lock:
             data = self._get_data(project_id)
-            data["pdfs_indexed"] += 1
+            data["pages_processed"] = data.get("pages_processed", 0) + page_count
+            data["pdfs_processed"] = data.get("pdfs_processed", 0) + 1
 
     async def get_usage(self, project_id: str) -> dict:
         lock = self._get_lock(project_id)
@@ -166,6 +209,8 @@ async def tracked_completion(
 
     Returns an AIMessage object. Access content via result.content
     """
+    from backend.config import get_model_prices
+
     # Build model kwargs
     model_kwargs = {}
     if temperature is not None:
@@ -195,6 +240,12 @@ async def tracked_completion(
         output_tokens = estimate_tokens(result.content if result.content else "")
 
     if project_id:
-        await usage_tracker.record_tokens(project_id, operation, input_tokens, output_tokens)
+        input_price, output_price = get_model_prices(model)
+        await usage_tracker.record_tokens(
+            project_id, operation, input_tokens, output_tokens,
+            model=model,
+            input_price_per_1m=input_price,
+            output_price_per_1m=output_price,
+        )
 
     return result

@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from sys import prefix
+import asyncio
 
 from deepagents import create_deep_agent
 from deepagents.backends import StateBackend, CompositeBackend
@@ -52,30 +52,33 @@ def _make_backend(runtime):
 
 _checkpointer_cache: dict[str, AsyncSqliteSaver] = {}
 _db_conn_cache: dict[str, aiosqlite.Connection] = {}
+_checkpointer_lock = asyncio.Lock()
 
 
 async def get_checkpointer(project_path: str) -> AsyncSqliteSaver:
-    if project_path in _checkpointer_cache:
-        return _checkpointer_cache[project_path]
-    db_path = str(Path(project_path) / "chat.db")
-    conn = await aiosqlite.connect(db_path)
-    checkpointer = AsyncSqliteSaver(conn)
-    await checkpointer.setup()
-    _checkpointer_cache[project_path] = checkpointer
-    _db_conn_cache[project_path] = conn
-    return checkpointer
+    async with _checkpointer_lock:
+        if project_path in _checkpointer_cache:
+            return _checkpointer_cache[project_path]
+        db_path = str(Path(project_path) / "chat.db")
+        conn = await aiosqlite.connect(db_path)
+        checkpointer = AsyncSqliteSaver(conn)
+        await checkpointer.setup()
+        _checkpointer_cache[project_path] = checkpointer
+        _db_conn_cache[project_path] = conn
+        return checkpointer
 
 
 async def close_checkpointer(project_path: str):
     """Close SQLite connection for a project to allow deletion."""
-    if project_path in _db_conn_cache:
-        try:
-            await _db_conn_cache[project_path].close()
-        except Exception:
-            pass
-        del _db_conn_cache[project_path]
-    if project_path in _checkpointer_cache:
-        del _checkpointer_cache[project_path]
+    async with _checkpointer_lock:
+        if project_path in _db_conn_cache:
+            try:
+                await _db_conn_cache[project_path].close()
+            except Exception:
+                pass
+            del _db_conn_cache[project_path]
+        if project_path in _checkpointer_cache:
+            del _checkpointer_cache[project_path]
 
 
 # ── Default tool sets ──
@@ -190,6 +193,8 @@ async def invoke_chat(
 ) -> str:
     from backend.utils.streaming import make_event
 
+    cfg = get_config()
+    agents_cfg = cfg.agents.chat
     agent = await create_chat_agent_for_project(project_path, project_id, scope)
 
     usage_callback = UsageTrackingCallback()
@@ -243,17 +248,29 @@ async def invoke_chat(
 
         # Track token usage from callback (accurate) or fallback to heuristic
         if response_content:
+            from backend.config import get_model_prices
+            chat_model_str = agents_cfg.model or cfg.llm_config.chat_agent.model
+            input_price, output_price = get_model_prices(chat_model_str)
+
             if usage_callback.total_input_tokens > 0 or usage_callback.total_output_tokens > 0:
                 await usage_tracker.record_tokens(
                     project_id, "chat",
                     usage_callback.total_input_tokens,
                     usage_callback.total_output_tokens,
+                    model=chat_model_str,
+                    input_price_per_1m=input_price,
+                    output_price_per_1m=output_price,
                 )
             else:
                 # Fallback heuristic
                 prompt_tokens = estimate_tokens(user_message)
                 completion_tokens = estimate_tokens(response_content)
-                await usage_tracker.record_tokens(project_id, "chat", prompt_tokens, completion_tokens)
+                await usage_tracker.record_tokens(
+                    project_id, "chat", prompt_tokens, completion_tokens,
+                    model=chat_model_str,
+                    input_price_per_1m=input_price,
+                    output_price_per_1m=output_price,
+                )
 
     except Exception as e:
         print(f"[CHAT] Agent error: {e}")

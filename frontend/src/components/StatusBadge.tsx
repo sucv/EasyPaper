@@ -5,6 +5,7 @@ type BadgeVariant = 'pending' | 'downloading' | 'ocr' | 'metadata' | 'tree_build
 const config: Record<string, { bg: string; text: string; label: string; spin?: boolean }> = {
   pending:       { bg: 'bg-gray-100',   text: 'text-gray-600',   label: 'Pending' },
   downloading:   { bg: 'bg-amber-50',   text: 'text-amber-700',  label: 'Downloading', spin: true },
+  downloaded:    { bg: 'bg-blue-50',    text: 'text-blue-700',   label: 'Downloaded' },
   ocr:           { bg: 'bg-amber-50',   text: 'text-amber-700',  label: 'OCR Processing', spin: true },
   metadata:      { bg: 'bg-amber-50',   text: 'text-amber-700',  label: 'Extracting Metadata', spin: true },
   tree_building: { bg: 'bg-amber-50',   text: 'text-amber-700',  label: 'Building Tree', spin: true },
@@ -35,6 +36,7 @@ export default function StatusBadge({ status, label }: Props) {
         </svg>
       )}
       {!c.spin && status === 'indexed' && <span>✓</span>}
+      {!c.spin && status === 'downloaded' && <span>✓</span>}
       {!c.spin && status === 'retrieved' && <span>✓</span>}
       {!c.spin && status === 'complete' && <span>✓</span>}
       {!c.spin && status === 'failed' && <span>✕</span>}

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import type { PaperEntry } from '../types';
+import type { Paper } from '../types';
 import { truncate } from '../utils/formatting';
 
 interface Props {
-  papers: PaperEntry[];
+  papers: Paper[];
   selectedIds: Set<string>;
   onToggleSelect: (paperId: string) => void;
   onSelectAll: (ids: string[]) => void;
@@ -13,8 +13,8 @@ interface Props {
   showCitation?: boolean;
   showIndexedColumn?: boolean;
   highlightIndexed?: boolean;
-  onAdd?: (paper: PaperEntry) => void;
-  onFetchCitation?: (paper: PaperEntry) => void;
+  onAdd?: (paper: Paper) => void;
+  onFetchCitation?: (paper: Paper) => void;
   pageSize?: number;
 }
 

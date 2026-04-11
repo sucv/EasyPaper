@@ -36,3 +36,15 @@ def busy_state(busy: bool, operation: str | None = None, idea_slug: str | None =
 
 def error_event(message: str, recoverable: bool = True, paper_id: str | None = None) -> str:
     return make_event("error", message=message, recoverable=recoverable, paper_id=paper_id)
+
+
+def download_progress(paper_id: str, title: str, status: str, current: int, total: int) -> str:
+    return make_event(
+        "download_progress",
+        paper_id=paper_id, title=title,
+        status=status, current=current, total=total,
+    )
+
+
+def download_complete() -> str:
+    return make_event("download_complete")

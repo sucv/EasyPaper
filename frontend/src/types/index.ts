@@ -1,17 +1,4 @@
-export interface PaperEntry {
-  paper_id: string;
-  title: string;
-  authors: string[];
-  year: number | null;
-  venue: string | null;
-  abstract: string | null;
-  citation_count: number | null;
-  source: 'accessible_db' | 'inaccessible_db' | 'arxiv' | 'user_provided';
-  pdf_url: string | null;
-  indexed: boolean;
-}
-
-export interface IdeaPaper {
+export interface Paper {
   paper_id: string;
   title: string;
   authors: string[];
@@ -21,7 +8,8 @@ export interface IdeaPaper {
   citation_count: number | null;
   source: string;
   pdf_url: string | null;
-  status: 'pending' | 'indexed' | 'retrieved';
+  indexed: boolean;
+  status: string;
 }
 
 export interface ReportInfo {
@@ -33,7 +21,7 @@ export interface ReportInfo {
 export interface IdeaState {
   idea_text: string;
   idea_slug: string;
-  papers: IdeaPaper[];
+  papers: Paper[];
   reports: ReportInfo[];
 }
 
@@ -76,10 +64,18 @@ export interface ChatMessage {
 }
 
 export interface UsageData {
-  pdfs_indexed: number;
+  pages_processed: number;
+  pdfs_processed: number;
   total_prompt_tokens: number;
   total_completion_tokens: number;
   by_operation: Record<string, { prompt_tokens: number; completion_tokens: number; calls: number }>;
+  by_model: Record<string, {
+    prompt_tokens: number;
+    completion_tokens: number;
+    calls: number;
+    input_price_per_1m: number;
+    output_price_per_1m: number;
+  }>;
 }
 
 export interface TaskConfig {
@@ -92,4 +88,6 @@ export interface ModelConfig {
   id: string;
   display_name: string;
   model_kwargs: Record<string, any>;
+  input_price_per_1m: number;
+  output_price_per_1m: number;
 }

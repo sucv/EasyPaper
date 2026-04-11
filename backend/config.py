@@ -17,6 +17,8 @@ class LLMModelConfig(BaseModel):
     top_p: float | None = None              # nucleus sampling
     top_k: int | None = None                # top-k sampling (Anthropic/Gemini)
     stop: list[str] | None = None           # stop sequences
+    input_price_per_1m: float = 0.0        # price per 1M input tokens (USD)
+    output_price_per_1m: float = 0.0       # price per 1M output tokens (USD)
 
 
 class LLMConfig(BaseModel):
@@ -24,7 +26,6 @@ class LLMConfig(BaseModel):
     metadata_extractor: LLMModelConfig = LLMModelConfig()
     tree_builder: LLMModelConfig = LLMModelConfig()
     tree_search: LLMModelConfig = LLMModelConfig()
-    report_writer: LLMModelConfig = LLMModelConfig(temperature=0.3)
     chat_agent: LLMModelConfig = LLMModelConfig(temperature=0.3)
 
 
@@ -117,6 +118,8 @@ class AvailableModel(BaseModel):
     id: str
     display_name: str
     model_kwargs: dict = {}
+    input_price_per_1m: float = 0.0
+    output_price_per_1m: float = 0.0
 
 
 class ResearchTaskConfig(BaseModel):
@@ -178,3 +181,27 @@ def get_config() -> AppConfig:
     if _config is None:
         _config = load_config()
     return _config
+
+
+def get_model_prices(model_str: str) -> tuple[float, float]:
+    """Look up (input_price_per_1m, output_price_per_1m) for a model string.
+
+    Searches llm_config entries first, then available_models.
+    Returns (0.0, 0.0) if not found.
+    """
+    cfg = get_config()
+
+    # Search llm_config entries
+    for field_name in ["metadata_extractor", "tree_builder", "tree_search", "chat_agent"]:
+        llm_cfg: LLMModelConfig = getattr(cfg.llm_config, field_name, None)
+        if llm_cfg and llm_cfg.model == model_str:
+            if llm_cfg.input_price_per_1m > 0 or llm_cfg.output_price_per_1m > 0:
+                return (llm_cfg.input_price_per_1m, llm_cfg.output_price_per_1m)
+
+    # Search available_models
+    for am in cfg.available_models:
+        if am.id == model_str:
+            if am.input_price_per_1m > 0 or am.output_price_per_1m > 0:
+                return (am.input_price_per_1m, am.output_price_per_1m)
+
+    return (0.0, 0.0)

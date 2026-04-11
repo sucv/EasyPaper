@@ -50,6 +50,8 @@ llm_config:
     temperature: 0
     reasoning: true
     reasoning_effort: "low"    # OpenAI o1/o3
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
   
   # A lightweight model should suffice
   tree_builder:
@@ -57,6 +59,8 @@ llm_config:
     temperature: 0
     reasoning: true
     reasoning_effort: "low"    # OpenAI o1/o3
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
 
   # Should be a more capable model
   tree_search:
@@ -64,13 +68,8 @@ llm_config:
     temperature: 0
     reasoning: true
     reasoning_effort: "medium"    # OpenAI o1/o3
-
-  # The strongest model better with thinking/reasoning capabilities
-  report_writer:
-    model: "openai:gpt-5.4"
-    temperature: 0.3
-    reasoning: true
-    reasoning_effort: "medium"    # OpenAI o1/o3
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
 
 
   # The strongest model better with thinking/reasoning capabilities
@@ -80,6 +79,8 @@ llm_config:
     # max_tokens: 8192
     reasoning: true
     reasoning_effort: "low"    # OpenAI o1/o3
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
     # thinking_budget: 10000        # Anthropic / Gemini
     # top_p: 0.95
     # top_k: 40
@@ -158,14 +159,20 @@ research_task_config:
 available_models:
   - id: "openai:gpt-5.4-mini"
     display_name: "GPT-5.4 Mini (Fast)"
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
     model_kwargs:
       reasoning_effort: "medium"
   - id: "openai:gpt-4.1"
     display_name: "GPT-4.1 (Balanced)"
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
     model_kwargs:
       temperature: 0.3
   - id: "openai:o3-mini"
     display_name: "O3 Mini (Reasoning)"
+    input_price_per_1m: 0.40
+    output_price_per_1m: 1.60
     model_kwargs:
       reasoning_effort: "medium"
 
@@ -176,16 +183,10 @@ observability:
 
 
 # ── Agent Configuration ──
-# Configure tools and skills for each agent independently.
+# Configure tools for each agent independently.
 # Skills are SKILL.md instruction files in the skills/ directory.
 # Custom tools are Python functions in the custom_tools/ directory.
 #
-# Available built-in skills:
-#   fact-checker     — Verifies citations against source papers
-#   critique         — Self-review and revision loop
-#   debate           — Multi-perspective analysis
-#   gap-analyzer     — Identifies research gaps
-#   related-work-finder — Maps connections across indexed papers
 #
 # Available built-in tools:
 #   list_papers, view_paper_structure, read_paper_sections, search_papers
@@ -199,12 +200,10 @@ agents:
     # model: "openai:gpt-4.1"     # Already set in llm_config.chat_agent, can override here if needed
     # temperature: 0.3
     # max_tokens: 8192
-    skills: []
     custom_tools: []
     subagents:
       paper-reader:
         # model: "openrouter:deepseek/deepseek-v3.2" # will inherit from the chat_agent if not set
-        skills: []
         custom_tools: []
 
   # Report generation agent
@@ -212,10 +211,8 @@ agents:
     # model: "openai:gpt-4.1" # Already set in llm_config.report_writer, can override here if needed
     # temperature: 0.3
     # max_tokens: 8192
-    skills: []
     custom_tools: []
     subagents:
       paper-analyst:
         # model: "openrouter:deepseek/deepseek-v3.2" # will inherit from the research agent if not set
-        skills: []
         custom_tools: []

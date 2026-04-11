@@ -198,7 +198,12 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
 
   // Auto-create session on first message if none active
   const handleSend = async () => {
-    if (!activeThread) {
+    if (!input.trim() || sending) return;
+
+    let threadId = activeThread;
+
+    // Auto-create session if none active
+    if (!threadId) {
       try {
         const res = await fetch(`${API}/projects/${projectId}/chat/sessions`, {
           method: 'POST',
@@ -206,20 +211,14 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
           body: JSON.stringify({ scope }),
         });
         const session = await res.json();
+        threadId = session.thread_id;
+        setActiveThread(threadId);
         await fetchSessions();
-        setActiveThread(session.thread_id);
-        // Small delay for state to settle, then send
-        setTimeout(() => {
-          sendMessageWithThread(session.thread_id);
-        }, 100);
-      } catch {}
-    } else {
-      sendMessage();
+      } catch {
+        return;
+      }
     }
-  };
 
-  const sendMessageWithThread = async (threadId: string) => {
-    if (!input.trim()) return;
     const userMsg = input.trim();
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
@@ -234,6 +233,12 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
       });
       const data = await res.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
+
+      if (data.title) {
+        setSessions((prev) =>
+          prev.map((s) => s.thread_id === threadId ? { ...s, title: data.title, message_count: (s.message_count || 0) + 2 } : s)
+        );
+      }
       await fetchSessions();
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: 'Error: failed to get response.' }]);
@@ -242,6 +247,7 @@ export default function ChatPanel({ projectId, ideas, addListener }: Props) {
       setStatusMsg('');
     }
   };
+
 
   const activeSession = sessions.find((s) => s.thread_id === activeThread);
   const totalMessages = sessions.reduce((s, sess) => s + sess.message_count, 0);

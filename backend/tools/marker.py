@@ -17,7 +17,7 @@ def _get_semaphore() -> asyncio.Semaphore:
     return _semaphore
 
 
-async def ocr_pdf(pdf_path: str, output_dir: str) -> dict:
+async def ocr_pdf(pdf_path: str, output_dir: str, page_range: str | None = None) -> dict:
     """
     Submit PDF to Marker API, poll for completion.
     Returns {"markdown": str, "figures": list[str]} with figure paths.
@@ -26,6 +26,10 @@ async def ocr_pdf(pdf_path: str, output_dir: str) -> dict:
     api_url = cfg.marker_config.api_url
     api_key = os.getenv("MARKER_API_KEY", "")
 
+    data={"output_format": "markdown", "extract_images": "true"}
+    if page_range:
+        data["page_range"] = page_range
+        
     sem = _get_semaphore()
     async with sem:
         async with httpx.AsyncClient(timeout=300) as client:
@@ -35,7 +39,7 @@ async def ocr_pdf(pdf_path: str, output_dir: str) -> dict:
                     api_url,
                     headers={"X-Api-Key": api_key},
                     files={"file": (Path(pdf_path).name, f, "application/pdf")},
-                    data={"output_format": "markdown", "extract_images": "true"},
+                    data=data,
                 )
                 resp.raise_for_status()
                 submit_data = resp.json()

@@ -1,0 +1,57 @@
+task_id: survey-discussion-analysis
+display_name: "Discussion & Analysis Survey"
+description: "Survey interpretive analysis, failure cases, limitations, and qualitative insights across papers"
+content_source: retrieval
+filename_template: "discussion_analysis_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the discussion, analysis, and limitation sections of the following paper. Extract interpretive findings beyond raw experimental results.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Key Interpretations** — the authors' explanations for why their method works or fails; causal claims or hypotheses offered
+  2. **Failure Cases and Error Analysis** — specific scenarios, data types, or conditions where the method underperforms; examples if provided
+  3. **Qualitative Analysis** — any case studies, visualizations (attention maps, feature maps, generated samples), or qualitative comparisons discussed
+  4. **Ablation Insights** — what the ablation studies reveal about which components matter most and why
+  5. **Trade-offs Identified** — explicit trade-offs discussed (e.g., speed vs. accuracy, generality vs. specialization, data efficiency vs. performance)
+  6. **Limitations Acknowledged** — all limitations the authors explicitly state about their approach
+  7. **Broader Implications** — any discussion of societal impact, ethical considerations, or potential misuse
+  8. **Unexpected Findings** — any surprising results or counterintuitive observations the authors highlight
+
+  If any of the above is not present, state "Not discussed."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes the analytical and interpretive insights across multiple research papers, focusing on what lies beyond raw results.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — purpose of this discussion-level synthesis; what it reveals beyond method and result comparisons
+  2. Interpretive Themes — recurring explanations for why methods succeed or fail; do papers agree on underlying mechanisms; identify competing hypotheses
+  3. Failure Mode Taxonomy — categorize failure cases across papers; identify systematic weaknesses shared by multiple methods; highlight failure modes unique to specific approaches
+  4. Qualitative Insights — synthesize what qualitative analyses reveal; common visualization or case study patterns; insights that quantitative metrics miss
+  5. Trade-off Landscape — map the trade-offs identified across papers; are there fundamental trade-offs the field faces; which trade-offs have been partially resolved over time
+  6. Limitation Analysis — categorize limitations into data limitations, method limitations, evaluation limitations, and scope limitations; identify limitations acknowledged by some papers but ignored by others
+  7. Self-Awareness Assessment — how honestly do papers assess their weaknesses; are acknowledged limitations addressed by other surveyed papers
+  8. Contradictions and Disagreements — cases where papers' interpretations or findings contradict each other; unresolved debates
+  9. Broader Impact Awareness — how the field addresses ethical and societal concerns; maturity of impact discussion over time
+  10. Synthesis — overarching insights about the field's understanding of its own methods and remaining blind spots
+
+  Use markdown formatting. Cite sources with (Author et al., Year).
+  Do NOT list each paper's discussion separately — cross-cut the analyses to surface field-level patterns.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

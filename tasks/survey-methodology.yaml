@@ -1,0 +1,57 @@
+task_id: survey-methodology
+display_name: "Methodology Survey"
+description: "Survey technical approaches, architectural choices, and algorithmic design across papers"
+content_source: retrieval
+filename_template: "methodology_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the methodology section of the following paper. Extract all technical details of the proposed approach.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Problem Formulation** — the formal/mathematical definition of the problem (input, output, objective function, constraints)
+  2. **Core Approach** — the high-level algorithmic or architectural strategy (e.g., encoder-decoder, GAN, reinforcement learning, graph neural network)
+  3. **Key Components** — list each major module or component of the system and its role
+  4. **Novel Technical Contributions** — what is technically new vs. borrowed from prior work; highlight original design choices
+  5. **Loss Functions and Objectives** — all training objectives, regularization terms, and how they are combined
+  6. **Theoretical Foundations** — any theoretical justification, proofs, or formal guarantees provided
+  7. **Assumptions and Constraints** — explicit or implicit assumptions the method relies on (e.g., data distribution, computational budget, domain-specific priors)
+  8. **Complexity and Scalability** — time/space complexity if discussed; scalability claims or limitations
+
+  If any of the above is not present, state "Not discussed."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes and compares the technical methodologies across multiple research papers.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — scope of the methodological survey, the shared problem space
+  2. Problem Formulation Comparison — how papers formalize the problem differently; identify equivalent formulations and genuinely distinct setups; use a table to compare input/output/objective across papers
+  3. Approach Taxonomy — categorize methods by their core strategy; identify dominant paradigms, hybrid approaches, and outliers
+  4. Architectural and Algorithmic Comparison — compare key components side by side; use a component-level comparison table (rows = papers, columns = components like encoder type, attention mechanism, loss function, etc.)
+  5. Novel Contributions Map — what each paper adds that is genuinely new; separate incremental improvements from paradigm shifts; identify converging design choices
+  6. Loss Functions and Training Objectives — compare objectives across papers; identify trends in loss design; note multi-objective trade-offs
+  7. Theoretical Grounding — which methods have formal guarantees; compare the strength and applicability of theoretical results; identify theory-practice gaps
+  8. Assumptions and Limitations — what each method assumes; which assumptions are shared vs. unique; which assumptions might not hold in practice
+  9. Complexity and Scalability — compare computational requirements where reported; identify efficiency-performance trade-offs
+  10. Methodological Gaps — approaches not yet tried, promising combinations unexplored, theoretical questions unresolved
+
+  Use markdown formatting. Include comparison tables. Cite sources with (Author et al., Year).
+  Do NOT describe each paper's method sequentially — synthesize to reveal the design space and trade-offs.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

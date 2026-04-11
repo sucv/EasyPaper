@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 from typing import Literal
 
 
-class PaperEntry(BaseModel):
+class Paper(BaseModel):
+    """Unified paper type used across search results, cart, and idea pools."""
     paper_id: str
     title: str
     authors: list[str] = Field(default_factory=list)
@@ -11,9 +12,10 @@ class PaperEntry(BaseModel):
     venue: str | None = None
     abstract: str | None = None
     citation_count: int | None = None
-    source: Literal["accessible_db", "inaccessible_db", "arxiv", "user_provided"]
+    source: str = "accessible_db"
     pdf_url: str | None = None
     indexed: bool = False
+    status: str = "pending"
 
 
 class PaperMetadata(BaseModel):
@@ -27,19 +29,6 @@ class PaperMetadata(BaseModel):
     source: str = ""
 
 
-class IdeaPaper(BaseModel):
-    paper_id: str
-    title: str
-    authors: list[str] = Field(default_factory=list)
-    year: int | None = None
-    venue: str | None = None
-    abstract: str | None = None
-    citation_count: int | None = None
-    source: str = "accessible_db"
-    pdf_url: str | None = None
-    status: Literal["pending", "indexed", "retrieved"] = "pending"
-
-
 class ReportInfo(BaseModel):
     filename: str
     display_name: str
@@ -49,7 +38,7 @@ class ReportInfo(BaseModel):
 class IdeaState(BaseModel):
     idea_text: str
     idea_slug: str
-    papers: list[IdeaPaper] = Field(default_factory=list)
+    papers: list[Paper] = Field(default_factory=list)
     reports: list[ReportInfo] = Field(default_factory=list)
 
 
@@ -64,7 +53,6 @@ class SearchRequest(BaseModel):
     method: Literal["boolean", "vector", "arxiv"]
     query: str
     filters: dict = Field(default_factory=dict)
-    # filters: {years: list[int], venues: list[str], accessible: bool}
 
 
 class DedupCheckRequest(BaseModel):
@@ -91,11 +79,7 @@ class CreateIdeaRequest(BaseModel):
 
 
 class AssignPapersRequest(BaseModel):
-    papers: list[PaperEntry]
-
-
-class RetrieveRequest(BaseModel):
-    paper_ids: list[str]
+    papers: list[Paper]
 
 
 class ResearchRequest(BaseModel):
@@ -122,3 +106,16 @@ class ChatSessionCreate(BaseModel):
 class ChatSessionUpdate(BaseModel):
     title: str | None = None
     scope: str | None = None
+
+
+class BatchDedupRequest(BaseModel):
+    titles: list[str]
+    existing_titles: list[str]
+
+
+class BatchCitationRequest(BaseModel):
+    titles: list[str]
+
+
+class RetrieveRequest(BaseModel):
+    page_ranges: dict[str, str] = {}

@@ -4,8 +4,7 @@ import json
 import yaml
 from pathlib import Path
 from backend.models import (
-    ProjectState, PaperMetadata, IdeaState, IdeaPaper,
-    ReportInfo,
+    ProjectState, PaperMetadata, IdeaState, Paper, ReportInfo,
 )
 from backend.utils.sanitize import desanitize_slug
 
@@ -41,31 +40,31 @@ def scan_project(project_path: str) -> ProjectState:
                 continue
 
             slug = idea_dir.name
-            # Read original idea text
             idea_txt_path = idea_dir / "idea.txt"
             if idea_txt_path.exists():
                 idea_text = idea_txt_path.read_text(encoding="utf-8").strip()
             else:
                 idea_text = desanitize_slug(slug)
 
-            # Load paper pool from papers.json (primary source of truth)
-            idea_papers: list[IdeaPaper] = []
+            # Load paper pool
+            idea_papers: list[Paper] = []
             papers_json_path = idea_dir / "papers.json"
             if papers_json_path.exists():
                 try:
                     pool = json.loads(papers_json_path.read_text(encoding="utf-8"))
                     for p in pool:
                         pid = p.get("paper_id", "")
-                        # Recompute status from filesystem
                         has_retrieval = (idea_dir / f"{pid}.md").exists()
+                        has_pdf = (pp / "papers" / pid / "paper.pdf").exists()
                         has_tree = pid in indexed_papers
                         if has_retrieval:
                             status = "retrieved"
-                        elif has_tree:
-                            status = "indexed"
+                        elif has_pdf:
+                            status = "downloaded"
                         else:
                             status = "pending"
-                        idea_papers.append(IdeaPaper(
+
+                        paper = Paper(
                             paper_id=pid,
                             title=p.get("title", pid),
                             authors=p.get("authors", []),
@@ -76,18 +75,37 @@ def scan_project(project_path: str) -> ProjectState:
                             source=p.get("source", "accessible_db"),
                             pdf_url=p.get("pdf_url"),
                             status=status,
-                        ))
+                            indexed=has_tree,
+                        )
+
+                        # Merge richer metadata from indexed papers
+                        if pid in indexed_papers:
+                            idx = indexed_papers[pid]
+                            if idx.title:
+                                paper.title = idx.title
+                            if idx.authors:
+                                paper.authors = idx.authors
+                            if idx.year is not None:
+                                paper.year = idx.year
+                            if idx.venue:
+                                paper.venue = idx.venue
+                            if idx.citation_count is not None:
+                                paper.citation_count = idx.citation_count
+                            if idx.abstract:
+                                paper.abstract = idx.abstract
+
+                        idea_papers.append(paper)
                 except Exception:
                     pass
             else:
-                # Fallback: reconstruct from retrieval markdowns (legacy/migration)
+                # Fallback: reconstruct from retrieval markdowns
                 for md_file in idea_dir.glob("*.md"):
                     if md_file.name == "idea.txt":
                         continue
                     paper_id = md_file.stem
                     meta = _read_frontmatter(md_file)
                     if meta:
-                        idea_papers.append(IdeaPaper(
+                        idea_papers.append(Paper(
                             paper_id=meta.get("paper_id", paper_id),
                             title=meta.get("title", paper_id),
                             authors=meta.get("authors", []),
@@ -96,6 +114,7 @@ def scan_project(project_path: str) -> ProjectState:
                             abstract=meta.get("abstract"),
                             citation_count=meta.get("citation_count"),
                             status="retrieved",
+                            indexed=paper_id in indexed_papers,
                         ))
 
             # Scan reports
@@ -124,7 +143,6 @@ def scan_project(project_path: str) -> ProjectState:
 
 
 def _read_frontmatter(md_path: Path) -> dict | None:
-    """Read YAML frontmatter from a markdown file."""
     try:
         text = md_path.read_text(encoding="utf-8")
         if text.startswith("---"):

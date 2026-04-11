@@ -1,0 +1,58 @@
+task_id: survey-implementation-details
+display_name: "Implementation Details Survey"
+description: "Survey engineering practices, infrastructure, frameworks, and reproducibility details across papers"
+content_source: retrieval
+filename_template: "implementation_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the implementation details of the following paper. Extract all engineering and practical information about how the method was built and run.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Frameworks and Libraries** — deep learning framework (PyTorch, TensorFlow, JAX, etc.), key libraries used, and version numbers if stated
+  2. **Hardware** — GPU/TPU type and count, CPU specs, total memory, distributed training setup if applicable
+  3. **Training Configuration** — optimizer, learning rate (and schedule), batch size, number of epochs/iterations, warmup steps, gradient clipping, mixed precision usage
+  4. **Model Size** — number of parameters, model dimensions, number of layers, embedding sizes, or other architectural sizing details
+  5. **Data Preprocessing** — tokenization, augmentation, normalization, filtering, or cleaning steps applied to data
+  6. **Training Time and Cost** — wall-clock training time, GPU hours, estimated compute cost if mentioned
+  7. **Inference Details** — inference speed, latency, throughput, memory footprint at inference time
+  8. **Code and Model Availability** — whether code, pretrained weights, or data are publicly released; repository URL if provided
+  9. **Engineering Tricks** — any non-obvious implementation details critical for reproducing results (e.g., specific initialization, custom CUDA kernels, memory optimization techniques)
+
+  If any of the above is not reported, explicitly state "Not reported."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes implementation practices and engineering details across multiple research papers.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — scope of the implementation survey, why engineering details matter for reproducibility and adoption
+  2. Framework and Ecosystem — which frameworks dominate; library dependencies; trends in framework adoption over time; use a table mapping papers to frameworks
+  3. Hardware and Compute Requirements — compare hardware used across papers; identify compute barriers to entry; use a table comparing GPU type, count, and training time across papers
+  4. Training Configuration Comparison — compare optimizers, learning rates, batch sizes, and schedules; identify common recipes vs. paper-specific tuning; use a table for side-by-side comparison
+  5. Model Scale — compare parameter counts, architecture dimensions; identify scaling trends; relate model size to reported performance
+  6. Data Pipeline Practices — common preprocessing steps, augmentation strategies; identify standardized vs. ad-hoc pipelines
+  7. Efficiency and Cost — compare training times and inference speeds where reported; identify efficiency-focused contributions; estimate accessibility of methods based on compute requirements
+  8. Reproducibility Assessment — how many papers release code/weights/data; completeness of reported details; which papers provide sufficient information to reproduce results; score or rank reproducibility
+  9. Engineering Best Practices — recurring tricks and techniques; identify implementation details that are critical but easily overlooked
+  10. Practical Recommendations — based on the survey, recommend standard configurations, minimum hardware requirements, and reproducibility best practices for the field
+
+  Use markdown formatting. Include comparison tables extensively. Cite sources with (Author et al., Year).
+  Do NOT list each paper's details in isolation — compare and contrast across papers to identify practical patterns and gaps.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

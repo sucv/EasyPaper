@@ -3,6 +3,9 @@
 import os
 import shutil
 import uuid
+import io
+import re
+import zipfile
 from pathlib import Path
 from backend.config import get_config
 from backend.utils.sanitize import sanitize_title
@@ -109,3 +112,31 @@ def scan_user_papers(project_id: str) -> list[str]:
     user_dir = get_project_path(project_id) / "user_papers"
     user_dir.mkdir(exist_ok=True)
     return [f.name for f in user_dir.glob("*.pdf")]
+
+
+def create_export_zip(md_path: str, base_dir: str) -> bytes:
+    """Create a zip file with the markdown and all referenced figures."""
+    md_file = Path(md_path)
+    content = md_file.read_text(encoding="utf-8")
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        img_refs = re.findall(r'!\[([^\]]*)\]\(([^)]+)\)', content)
+        new_content = content
+
+        for alt, img_path in img_refs:
+            resolved = (md_file.parent / img_path).resolve()
+            if not resolved.exists():
+                resolved = (Path(base_dir) / img_path).resolve()
+            if resolved.exists():
+                fig_name = resolved.name
+                zf.write(str(resolved), f"figures/{fig_name}")
+                new_content = new_content.replace(
+                    f"![{alt}]({img_path})",
+                    f"![{alt}](figures/{fig_name})"
+                )
+
+        zf.writestr(md_file.name, new_content)
+
+    buf.seek(0)
+    return buf.read()

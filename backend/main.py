@@ -16,15 +16,16 @@ from backend.config import get_config
 from backend.models import (
     SearchRequest, DedupCheckRequest, DedupCheckResponse,
     CitationRequest, CitationResponse, CreateIdeaRequest,
-    AssignPapersRequest, RetrieveRequest, ResearchRequest, BusyStateResponse,
-    PaperEntry, PaperMetadata, IdeaPaper,
+    AssignPapersRequest, ResearchRequest, BusyStateResponse,
+    Paper, PaperMetadata,
+    BatchDedupRequest, BatchCitationRequest,
 )
 from backend.project.manager import (
     create_project, list_projects, get_project_path,
     delete_project, create_idea, delete_idea, scan_user_papers,
 )
 from backend.project.scanner import scan_project
-from backend.project.export import create_export_zip
+from backend.project.manager import create_export_zip
 from backend.search.boolean_search import boolean_search_titles
 from backend.search.vector_search import vector_search
 from backend.search.arxiv_search import arxiv_search
@@ -34,11 +35,12 @@ from backend.tools.dedup import check_duplicate, batch_check_duplicates
 from backend.utils.busy import busy_manager
 from backend.utils.sanitize import sanitize_title
 from backend.utils.streaming import busy_state as busy_state_event
-from backend.pipeline.indexing import run_indexing
+from backend.pipeline.download import run_download, _get_page_count
 from backend.pipeline.retrieval import run_retrieval
 from backend.research.agent import run_report_generation
 from backend.research.tasks import list_tasks, load_task
 from backend.models import ChatMessageRequest, ChatSessionCreate, ChatSessionUpdate
+from backend.models import RetrieveRequest
 from backend.chat.agent import invoke_chat, get_chat_history
 from backend.chat.sessions import (
     get_sessions_index, create_session, update_session,
@@ -53,6 +55,10 @@ async def lifespan(app: FastAPI):
     projects_root.mkdir(parents=True, exist_ok=True)
     app.mount("/files", StaticFiles(directory=str(projects_root)), name="project_files")
     yield
+    # Shutdown: close all cached SQLite connections
+    from backend.chat.agent import close_checkpointer, _checkpointer_cache
+    for project_path in list(_checkpointer_cache.keys()):
+        await close_checkpointer(project_path)
 
 
 app = FastAPI(title="Research Copilot", lifespan=lifespan)
@@ -117,12 +123,6 @@ async def api_get_project(project_id: str):
     return state.model_dump()
 
 
-@app.delete("/projects/{project_id}")
-async def api_delete_project(project_id: str):
-    delete_project(project_id)
-    return {"ok": True}
-
-
 # ── Tags ──
 @app.get("/projects/{project_id}/tags")
 async def api_get_tags(accessible: bool = True):
@@ -172,7 +172,7 @@ async def api_search(project_id: str, req: SearchRequest):
         matched = boolean_search_titles(filtered, req.query)
         for m in matched[:cfg.search_config.max_results_per_search]:
             pid = sanitize_title(m["title"])
-            results.append(PaperEntry(
+            results.append(Paper(
                 paper_id=pid,
                 title=m["title"],
                 authors=m.get("authors", []),
@@ -188,7 +188,7 @@ async def api_search(project_id: str, req: SearchRequest):
         raw = vector_search(req.query, accessible=accessible, years=years, venues=venues)
         for m in raw:
             pid = sanitize_title(m["title"])
-            results.append(PaperEntry(
+            results.append(Paper(
                 paper_id=pid,
                 title=m["title"],
                 authors=m.get("authors", []),
@@ -204,7 +204,7 @@ async def api_search(project_id: str, req: SearchRequest):
         raw = arxiv_search(req.query)
         for m in raw:
             m["indexed"] = m.get("paper_id", "") in indexed_set
-            results.append(PaperEntry(**m))
+            results.append(Paper(**m))
 
     return {"results": [r.model_dump() for r in results]}
 
@@ -240,14 +240,10 @@ async def api_upload_papers(project_id: str, files: list[UploadFile] = FastAPIFi
             continue
 
         dest = user_papers_dir / file.filename
-        # Avoid overwriting
+        # Skip if file already exists (same filename = same paper)
         if dest.exists():
-            stem = dest.stem
-            suffix = dest.suffix
-            counter = 1
-            while dest.exists():
-                dest = user_papers_dir / f"{stem}_{counter}{suffix}"
-                counter += 1
+            uploaded.append(dest.name)  # Still return it so frontend can add to cart
+            continue
 
         dest.write_bytes(content)
         uploaded.append(dest.name)
@@ -255,10 +251,6 @@ async def api_upload_papers(project_id: str, files: list[UploadFile] = FastAPIFi
     return {"uploaded": uploaded, "errors": errors, "count": len(uploaded)}
 
 # ── Dedup ──
-class BatchDedupRequest(BaseModel):
-    titles: list[str]
-    existing_titles: list[str]
-
 @app.post("/projects/{project_id}/dedup-check")
 async def api_dedup_check(project_id: str, req: DedupCheckRequest):
     path = get_project_path(project_id)
@@ -283,9 +275,6 @@ async def api_dedup_check_batch(project_id: str, req: BatchDedupRequest):
     return {"results": results}
 
 # ── Citation ──
-class BatchCitationRequest(BaseModel):
-    titles: list[str]
-
 @app.post("/projects/{project_id}/citation")
 async def api_citation(project_id: str, req: CitationRequest):
     result = await fetch_citation_count(req.title)
@@ -309,6 +298,13 @@ async def api_create_idea(project_id: str, req: CreateIdeaRequest):
     slug = create_idea(project_id, req.idea_text)
     return {"idea_slug": slug, "idea_text": req.idea_text}
 
+@app.delete("/projects/{project_id}/ideas/{idea_slug}")
+async def api_delete_idea_endpoint(project_id: str, idea_slug: str):
+    path = get_project_path(project_id)
+    if not path.exists():
+        raise HTTPException(404, "Project not found")
+    delete_idea(project_id, idea_slug)
+    return {"ok": True}
 
 @app.post("/projects/{project_id}/ideas/{idea_slug}/papers")
 async def api_assign_papers(project_id: str, idea_slug: str, req: AssignPapersRequest):
@@ -472,40 +468,102 @@ async def api_idea_files(project_id: str, idea_slug: str):
     return {"reports": reports, "retrievals": retrievals}
 
 
-# ── Operations ──
-class IndexRequest(BaseModel):
-    papers: list[PaperEntry]
+@app.get("/projects/{project_id}/ideas/{idea_slug}/preflight")
+async def api_preflight(project_id: str, idea_slug: str):
+    """Get status of all papers for confirmation dialogs."""
+    path = get_project_path(project_id)
+    idea_dir = path / "ideas" / idea_slug
+    papers_dir = path / "papers"
 
-@app.post("/projects/{project_id}/ideas/{idea_slug}/index")
-async def api_index(project_id: str, idea_slug: str, req: IndexRequest):
-    if not await busy_manager.acquire(project_id, "index", idea_slug):
+    papers_json = idea_dir / "papers.json"
+    if not papers_json.exists():
+        return {"papers": []}
+
+    pool = json.loads(papers_json.read_text(encoding="utf-8"))
+    result = []
+
+    for p in pool:
+        pid = p.get("paper_id", "")
+        pdf_path = papers_dir / pid / "paper.pdf"
+        pdf_exists = pdf_path.exists()
+        tree_exists = (papers_dir / pid / "tree.json").exists()
+        retrieval_exists = (idea_dir / f"{pid}.md").exists()
+
+        pages = None
+        if pdf_exists:
+            pages = _get_page_count(pdf_path)
+
+        word_count = None
+        if retrieval_exists:
+            try:
+                content = (idea_dir / f"{pid}.md").read_text(encoding="utf-8")
+                word_count = len(content.split())
+            except Exception:
+                pass
+
+        result.append({
+            "paper_id": pid,
+            "title": p.get("title", pid),
+            "source": p.get("source", ""),
+            "pdf_url": p.get("pdf_url"),
+            "pdf_exists": pdf_exists,
+            "tree_exists": tree_exists,
+            "retrieval_exists": retrieval_exists,
+            "pages": pages,
+            "word_count": word_count,
+        })
+
+    return {"papers": result}
+
+
+# ── Operations ──
+@app.post("/projects/{project_id}/ideas/{idea_slug}/download")
+async def api_download(project_id: str, idea_slug: str):
+    if not await busy_manager.acquire(project_id, "download", idea_slug):
         raise HTTPException(409, "Another operation is in progress")
+
+    idea_dir = get_project_path(project_id) / "ideas" / idea_slug
+    papers_json = idea_dir / "papers.json"
+    if not papers_json.exists():
+        await busy_manager.release(project_id)
+        raise HTTPException(400, "No papers in this idea")
+
+    pool = json.loads(papers_json.read_text(encoding="utf-8"))
+    papers = [Paper(**p) for p in pool]
 
     async def send_ws(msg):
         await _broadcast(project_id, msg)
 
-    await _broadcast(project_id, busy_state_event(True, "index", idea_slug))
+    await _broadcast(project_id, busy_state_event(True, "download", idea_slug))
 
     async def _run():
         try:
             project_path = str(get_project_path(project_id))
-            await run_indexing(project_path, req.papers, send_ws)
+            await run_download(project_path, papers, send_ws)
         finally:
             await busy_manager.release(project_id)
             await _broadcast(project_id, busy_state_event(False))
 
     asyncio.create_task(_run())
-    return {"ok": True, "message": "Indexing started"}
+    return {"ok": True, "message": "Download started"}
 
 
 @app.post("/projects/{project_id}/ideas/{idea_slug}/retrieve")
-async def api_retrieve(project_id: str, idea_slug: str, req: RetrieveRequest):
+async def api_retrieve(project_id: str, idea_slug: str, req: RetrieveRequest = RetrieveRequest()):
     if not await busy_manager.acquire(project_id, "retrieve", idea_slug):
         raise HTTPException(409, "Another operation is in progress")
 
     idea_dir = get_project_path(project_id) / "ideas" / idea_slug
     idea_txt = idea_dir / "idea.txt"
     idea_text = idea_txt.read_text(encoding="utf-8").strip() if idea_txt.exists() else idea_slug
+
+    papers_json = idea_dir / "papers.json"
+    if not papers_json.exists():
+        await busy_manager.release(project_id)
+        raise HTTPException(400, "No papers in this idea")
+
+    pool = json.loads(papers_json.read_text(encoding="utf-8"))
+    paper_ids = [p["paper_id"] for p in pool]
 
     async def send_ws(msg):
         await _broadcast(project_id, msg)
@@ -515,7 +573,7 @@ async def api_retrieve(project_id: str, idea_slug: str, req: RetrieveRequest):
     async def _run():
         try:
             project_path = str(get_project_path(project_id))
-            await run_retrieval(project_path, idea_slug, idea_text, req.paper_ids, send_ws)
+            await run_retrieval(project_path, idea_slug, idea_text, paper_ids, send_ws, page_ranges=req.page_ranges)
         finally:
             await busy_manager.release(project_id)
             await _broadcast(project_id, busy_state_event(False))

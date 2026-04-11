@@ -38,12 +38,23 @@ const examples: Record<string, { placeholder: string; examples: string[] }> = {
   },
 };
 
-const MAX_HISTORY = 20;
 
 export default function SearchBar({ onSearch, loading }: Props) {
   const [query, setQuery] = useState('');
   const [method, setMethod] = useState<string>('vector');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const HISTORY_STORAGE_KEY = 'easypaper_search_history';
+  const MAX_HISTORY = 15;
+
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.slice(0, MAX_HISTORY);
+      }
+    } catch {}
+    return [];
+  });
   const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -63,11 +74,13 @@ export default function SearchBar({ onSearch, loading }: Props) {
   const handleSearch = () => {
     if (!query.trim()) return;
     onSearch(method, query);
-    // Add to history (dedup: move existing to top)
+    // Add to history (dedup: move existing to top), persist to localStorage
     setHistory((prev) => {
       const filtered = prev.filter((h) => !(h.query === query.trim() && h.method === method));
       const newItem: HistoryItem = { method, query: query.trim(), timestamp: Date.now() };
-      return [newItem, ...filtered].slice(0, MAX_HISTORY);
+      const updated = [newItem, ...filtered].slice(0, MAX_HISTORY);
+      try { localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
     });
     setShowHistory(false);
   };
@@ -113,7 +126,11 @@ export default function SearchBar({ onSearch, loading }: Props) {
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Searches</span>
                 <button
                   className="text-xs text-gray-400 hover:text-red-500 font-medium"
-                  onClick={() => { setHistory([]); setShowHistory(false); }}
+                  onClick={() => {
+                    setHistory([]);
+                    setShowHistory(false);
+                    try { localStorage.removeItem(HISTORY_STORAGE_KEY); } catch {}
+                  }}
                 >Clear</button>
               </div>
               {history.map((item, i) => (

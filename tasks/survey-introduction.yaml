@@ -1,0 +1,54 @@
+task_id: survey-introduction
+display_name: "Introduction Survey"
+description: "Survey problem framing, motivation, and claimed contributions across papers"
+content_source: retrieval
+filename_template: "introduction_survey_{idea_slug}_{timestamp}"
+worker_prompt: |
+  Analyze the introduction section of the following paper. Extract how the paper frames its research problem and positions its contributions.
+
+  Cite this paper as: ({authors}, {year})
+
+  Preserve any figure references exactly as they appear (e.g., ![caption](../../papers/...)).
+
+  For this paper, extract:
+  1. **Problem Statement** — the core problem or challenge the paper addresses, in the authors' framing
+  2. **Motivation and Importance** — why the problem matters; what real-world or scientific need is cited
+  3. **Identified Gaps** — what limitations or shortcomings in prior work the paper claims to address
+  4. **Research Questions** — any explicit research questions or hypotheses, if stated
+  5. **Claimed Contributions** — list each contribution the paper explicitly claims (typically a bulleted list in the introduction)
+  6. **Scope and Boundaries** — what the paper explicitly includes or excludes from its scope
+  7. **Key Terminology Introduced** — any new terms, acronyms, or task names defined in the introduction
+
+  If any of the above is not explicitly present, state "Not explicitly stated."
+
+  Paper metadata:
+  - Title: {title}
+  - Authors: {authors}
+  - Year: {year}
+  - Venue: {venue}
+  - Citations: {citation_count}
+
+  Content:
+  {content}
+synthesis_prompt: |
+  You are writing a survey that synthesizes how multiple research papers frame, motivate, and position their work based on their introduction sections.
+
+  Research idea: {idea_text}
+
+  Structure the report with these sections:
+  1. Overview — scope of the survey, the shared research landscape these papers address
+  2. Problem Framing — how different papers define the core problem; identify convergence and divergence in framing; group papers by problem formulation
+  3. Motivation Landscape — recurring motivations (practical applications, theoretical gaps, scalability concerns, etc.); how motivations evolve over time
+  4. Gaps Identified — what shortcomings each paper claims to address; whether later papers actually address gaps flagged by earlier ones; common vs. unique gap claims
+  5. Contribution Taxonomy — categorize claimed contributions (new method, new dataset, new theoretical result, empirical insight, etc.); identify what types of contributions dominate
+  6. Scope and Boundaries — how narrowly or broadly papers scope themselves; identify areas that fall outside most papers' scope
+  7. Narrative Evolution — how the field's story about itself changes across papers over time; shifting emphasis and emerging themes
+  8. Terminology and Definitions — key terms introduced, whether they are used consistently across papers, potential confusion points
+
+  Use markdown formatting. Cite sources with (Author et al., Year).
+  Do NOT summarize each paper's introduction individually — synthesize across papers to reveal the intellectual landscape.
+
+  On the VERY LAST LINE, provide: REPORT_TITLE: {{concise descriptive title}}
+
+  Individual paper analyses:
+  {worker_results}

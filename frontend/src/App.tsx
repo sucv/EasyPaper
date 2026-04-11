@@ -10,7 +10,7 @@ import UsageSummary from './components/UsageSummary';
 import DedupWarningDialog, { type DedupItem } from './components/DedupWarningDialog';
 import { useProject } from './hooks/useProject';
 import { useWebSocket } from './hooks/useWebSocket';
-import type { PaperEntry, IdeaState } from './types';
+import type { Paper, IdeaState } from './types';
 import { sanitizeTitle } from './utils/formatting';
 
 const API = '/api';
@@ -18,7 +18,7 @@ const API = '/api';
 export default function App() {
   const { projectId, setProjectId, projectState, projects, fetchProjects, createProject, loadProject, refreshProject } = useProject();
   const { busyState, addListener } = useWebSocket(projectId);
-  const [cart, setCart] = useState<PaperEntry[]>([]);
+  const [cart, setCart] = useState<Paper[]>([]);
   const [ideas, setIdeas] = useState<IdeaState[]>([]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [globalProgress, setGlobalProgress] = useState<any>(null);
@@ -118,7 +118,7 @@ export default function App() {
     }
   }, [projectId]);
 
-  const batchFetchCitations = useCallback(async (papers: PaperEntry[]) => {
+  const batchFetchCitations = useCallback(async (papers: Paper[]) => {
     if (!projectId) return;
     const needCitation = papers.filter((p) => p.citation_count == null && p.title);
     if (needCitation.length === 0) return;
@@ -149,6 +149,10 @@ export default function App() {
   // ── Project handlers ──
 
   const handleSelectProject = async (pid: string) => {
+    if (busyState.busy) {
+      alert('An operation is in progress. Please wait until it finishes before switching projects.');
+      return;
+    }
     setProjectId(pid);
     setCart([]);
     setIdeas([]);
@@ -161,6 +165,12 @@ export default function App() {
   };
 
   const handleCreateProject = async (name?: string) => {
+    if (busyState.busy) {
+      alert('An operation is in progress. Please wait until it finishes before creating a project.');
+      return;
+    }
+    setIdeas([]);
+    setCart([]);
     const pid = await createProject(name);
     await loadProject(pid);
   };
@@ -190,7 +200,7 @@ export default function App() {
 
   const cartIds = new Set(cart.map((p) => p.paper_id));
 
-  const addToCart = useCallback(async (papers: PaperEntry[]) => {
+  const addToCart = useCallback(async (papers: Paper[]) => {
     if (!projectId) return;
     let surviving = papers.filter((p) => !cartIds.has(p.paper_id));
     if (surviving.length === 0) return;
@@ -264,7 +274,7 @@ export default function App() {
       }
 
       if (data.uploaded && data.uploaded.length > 0) {
-        const newPapers: PaperEntry[] = data.uploaded.map((fname: string) => {
+        const newPapers: Paper[] = data.uploaded.map((fname: string) => {
           const title = fname.replace(/\.pdf$/i, '');
           return {
             paper_id: sanitizeTitle(title),
@@ -274,7 +284,7 @@ export default function App() {
             venue: null,
             abstract: null,
             citation_count: null,
-            source: 'user_provided' as const,
+            source: 'user_provided',
             pdf_url: null,
             indexed: false,
           };
@@ -292,7 +302,7 @@ export default function App() {
 
   // ── Ideas ──
 
-  const handleAssignToIdea = async (ideaSlug: string, papers: PaperEntry[]) => {
+  const handleAssignToIdea = async (ideaSlug: string, papers: Paper[]) => {
     if (!projectId) return;
 
     // Stage 3: Dedup against existing idea pool
@@ -320,7 +330,7 @@ export default function App() {
     addToast(`Assigned ${papers.length} paper(s) to idea`, 'success');
   };
 
-  const handleNewIdea = async (text: string, papers: PaperEntry[]) => {
+  const handleNewIdea = async (text: string, papers: Paper[]) => {
     if (!projectId) return;
     const res = await fetch(`${API}/projects/${projectId}/ideas`, {
       method: 'POST',
@@ -411,6 +421,7 @@ export default function App() {
             busy={busyState}
             loading={projectLoading}
             onDeleteIdea={handleDeleteIdea}
+            onAddToCart={addToCart}
             addListener={addListener}
             onRefresh={refreshProject}
           />
